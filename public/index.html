@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Tic Tac Toe - Celo</title>
+    <script src="https://cdn.ethers.io/lib/ethers-5.7.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #8A63D2;
+            --primary-dark: #6B4BA8;
+            --secondary: #4CAF50;
+            --danger: #FF5252;
+            --warning: #FFA726;
+            --bg-dark: #1A1625;
+            --bg-card: #2D2438;
+            --text-primary: #FFFFFF;
+            --text-secondary: #B8A8D8;
+            --shadow: 0 4px 20px rgba(138, 99, 210, 0.3);
+            --shadow-hover: 0 8px 30px rgba(138, 99, 210, 0.4);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            background: linear-gradient(135deg, #1A1625 0%, #2D1B3D 100%);
+            min-height: 100vh;
+            color: var(--text-primary);
+            overflow-x: hidden;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        .app-container {
+            max-width: 500px;
+            margin: 0 auto;
+            padding: 12px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 16px;
+            animation: fadeInDown 0.5s ease;
+        }
+
+        .logo {
+            font-size: 2.5em;
+            margin-bottom: 4px;
+            filter: drop-shadow(0 2px 8px rgba(138, 99, 210, 0.5));
+        }
+
+        .title {
+            font-size: 1.5em;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, #B794F4 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 4px;
+        }
+
+        .subtitle {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+        }
+
+        /* Mode Toggle */
+        .mode-toggle {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            background: var(--bg-card);
+            padding: 6px;
+            border-radius: 16px;
+            margin-bottom: 16px;
+            box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+        }
+
+        .mode-btn {
+            padding: 12px;
+            border: none;
+            background: transparent;
+            color: var(--text-secondary);
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--text-primary);
+            box-shadow: var(--shadow);
+            transform: translateY(-2px);
+        }
+
+        /* Wallet Card */
+        .wallet-card {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .wallet-card.active {
+            display: block;
+        }
+
+        .wallet-status {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .wallet-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .wallet-label {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .wallet-address {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--text-primary);
+            background: rgba(138, 99, 210, 0.2);
+            padding: 6px 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: var(--shadow);
+            white-space: nowrap;
+        }
+
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--secondary) 0%, #45a049 100%);
+            color: white;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--danger) 0%, #e04545 100%);
+            color: white;
+        }
+
+        /* Game Card */
+        .game-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 16px;
+            box-shadow: var(--shadow);
+        }
+
+        /* Status Banner */
+        .status-banner {
+            background: linear-gradient(135deg, rgba(138, 99, 210, 0.2) 0%, rgba(107, 75, 168, 0.2) 100%);
+            border-left: 4px solid var(--primary);
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            font-weight: 600;
+            text-align: center;
+            animation: slideIn 0.3s ease;
+            min-height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .status-banner.win {
+            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(69, 160, 73, 0.2) 100%);
+            border-left-color: var(--secondary);
+        }
+
+        .status-banner.lose {
+            background: linear-gradient(135deg, rgba(255, 82, 82, 0.2) 0%, rgba(224, 69, 69, 0.2) 100%);
+            border-left-color: var(--danger);
+        }
+
+        .status-banner.draw {
+            background: linear-gradient(135deg, rgba(255, 167, 38, 0.2) 0%, rgba(255, 152, 0, 0.2) 100%);
+            border-left-color: var(--warning);
+        }
+
+        /* Game Board */
+        .board-container {
+            aspect-ratio: 1;
+            max-width: 380px;
+            margin: 0 auto 20px;
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            width: 100%;
+            height: 100%;
+        }
+
+        .cell {
+            aspect-ratio: 1;
+            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
+            border: 2px solid rgba(138, 99, 210, 0.3);
+            border-radius: 16px;
+            font-size: clamp(2.5em, 8vw, 3.5em);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .cell::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(138, 99, 210, 0.2) 0%, rgba(107, 75, 168, 0.1) 100%);
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .cell:hover:not(.filled)::before {
+            opacity: 1;
+        }
+
+        .cell:active:not(.filled) {
+            transform: scale(0.95);
+        }
+
+        .cell.filled {
+            cursor: not-allowed;
+            border-color: rgba(138, 99, 210, 0.6);
+        }
+
+        .cell.x {
+            color: var(--primary);
+            text-shadow: 0 0 20px rgba(138, 99, 210, 0.8);
+            animation: placeX 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        .cell.o {
+            color: var(--secondary);
+            text-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+            animation: placeO 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+        }
+
+        /* Controls */
+        .game-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .game-controls .btn {
+            flex: 1;
+            padding: 14px;
+            font-size: 1em;
+        }
+
+        /* Stats Grid */
+        .stats-section {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .stats-header {
+            font-size: 1.1em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
+            border-radius: 12px;
+            padding: 12px;
+            text-align: center;
+            border: 1px solid rgba(138, 99, 210, 0.2);
+        }
+
+        .stat-value {
+            font-size: 1.8em;
+            font-weight: 700;
+            color: var(--primary);
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.7em;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        /* Leaderboard */
+        .leaderboard {
+            background: var(--bg-card);
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .leaderboard-scroll {
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 12px;
+        }
+
+        .leaderboard-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .leaderboard-scroll::-webkit-scrollbar-track {
+            background: rgba(138, 99, 210, 0.1);
+            border-radius: 10px;
+        }
+
+        .leaderboard-scroll::-webkit-scrollbar-thumb {
+            background: var(--primary);
+            border-radius: 10px;
+        }
+
+        .leaderboard-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
+            border-radius: 12px;
+            margin-bottom: 8px;
+            border: 1px solid rgba(138, 99, 210, 0.2);
+        }
+
+        .leaderboard-rank {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--primary);
+            min-width: 30px;
+        }
+
+        .leaderboard-rank.top3 {
+            font-size: 1.5em;
+        }
+
+        .leaderboard-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .leaderboard-address {
+            font-family: 'Courier New', monospace;
+            font-size: 0.85em;
+            color: var(--text-primary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .leaderboard-stats {
+            font-size: 0.75em;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .leaderboard-wins {
+            font-size: 1.2em;
+            font-weight: 700;
+            color: var(--secondary);
+            min-width: 50px;
+            text-align: right;
+        }
+
+        /* Loading & Error */
+        .loading, .error, .empty {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+
+        .error {
+            color: var(--danger);
+        }
+
+        .spinner {
+            border: 3px solid rgba(138, 99, 210, 0.2);
+            border-top: 3px solid var(--primary);
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        @keyframes placeX {
+            from {
+                opacity: 0;
+                transform: scale(0) rotate(-180deg);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0);
+            }
+        }
+
+        @keyframes placeO {
+            from {
+                opacity: 0;
+                transform: scale(0) rotate(180deg);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1) rotate(0);
+            }
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 400px) {
+            .app-container {
+                padding: 8px;
+            }
+
+            .stats-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .cell {
+                border-radius: 12px;
+            }
+        }
+
+        @media (min-height: 800px) {
+            .app-container {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <div class="header">
+            <div class="logo">🎮</div>
+            <h1 class="title">Tic Tac Toe</h1>
+            <p class="subtitle">Powered by Celo</p>
+        </div>
+
+        <!-- Mode Toggle -->
+        <div class="mode-toggle">
+            <button class="mode-btn active" onclick="switchMode('free')">
+                <span>🎯</span>
+                <span>Free Play</span>
+            </button>
+            <button class="mode-btn" onclick="switchMode('chain')">
+                <span>⛓️</span>
+                <span>On-Chain</span>
+            </button>
+        </div>
+
+        <!-- Wallet Card -->
+        <div class="wallet-card" id="walletCard">
+            <div class="wallet-status">
+                <div class="wallet-info">
+                    <div class="wallet-label" id="walletLabel">Wallet Status</div>
+                    <div class="wallet-address" id="walletAddress" style="display:none;"></div>
+                </div>
+                <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
+                    Connect
+                </button>
+            </div>
+        </div>
+
+        <!-- Game Card -->
+        <div class="game-card">
+            <!-- Status -->
+            <div class="status-banner" id="statusBanner">
+                Click Start to begin! 🚀
+            </div>
+
+            <!-- Board -->
+            <div class="board-container">
+                <div class="game-board" id="gameBoard">
+                    <div class="cell" onclick="makeMove(0)"></div>
+                    <div class="cell" onclick="makeMove(1)"></div>
+                    <div class="cell" onclick="makeMove(2)"></div>
+                    <div class="cell" onclick="makeMove(3)"></div>
+                    <div class="cell" onclick="makeMove(4)"></div>
+                    <div class="cell" onclick="makeMove(5)"></div>
+                    <div class="cell" onclick="makeMove(6)"></div>
+                    <div class="cell" onclick="makeMove(7)"></div>
+                    <div class="cell" onclick="makeMove(8)"></div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="game-controls">
+                <button class="btn btn-success" id="startBtn" onclick="startGame()">
+                    Start Game
+                </button>
+                <button class="btn btn-danger" id="resetBtn" onclick="resetGame()" disabled>
+                    Reset
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-section">
+            <div class="stats-header">
+                <span>📊</span>
+                <span>Your Stats</span>
+            </div>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-value" id="statGames">0</div>
+                    <div class="stat-label">Games</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statWins">0</div>
+                    <div class="stat-label">Wins</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statLosses">0</div>
+                    <div class="stat-label">Losses</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statDraws">0</div>
+                    <div class="stat-label">Draws</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statWinRate">0%</div>
+                    <div class="stat-label">Win Rate</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statStreak">0</div>
+                    <div class="stat-label">Streak</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Leaderboard -->
+        <div class="leaderboard" id="leaderboard" style="display:none;">
+            <div class="stats-header">
+                <span>🏆</span>
+                <span>Leaderboard</span>
+            </div>
+            <div class="leaderboard-scroll" id="leaderboardContent">
+                <div class="loading">
+                    <div class="spinner"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract Configuration
+        const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
+        const CELO_MAINNET_CHAIN_ID = "0xa4ec";
+        const CELO_RPC_URL = "https://forno.celo.org";
+
+        const CONTRACT_ABI = [
+            "function startGame() external",
+            "function makeMove(uint8 position) external",
+            "function forfeitGame() external",
+            "function getBoard(address player) external view returns (uint8[9])",
+            "function getPlayerStats(address player) external view returns (uint256 gamesPlayed, uint256 wins, uint256 losses, uint256 draws, uint256 winRate, uint256 currentStreak, uint256 bestStreak, uint256 fastestWin)",
+            "function getLeaderboard() external view returns (tuple(address player, uint256 wins, uint256 winRate, uint256 bestStreak, uint256 fastestWin)[])",
+            "event GameStarted(address indexed player, uint256 timestamp)",
+            "event MoveMade(address indexed player, uint8 position, uint8 playerType)",
+            "event GameEnded(address indexed player, uint8 status, uint256 duration)"
+        ];
+
+        // Game State
+        let currentMode = 'free';
+        let gameActive = false;
+        let board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+        let currentTurn = 1;
+        let provider = null;
+        let signer = null;
+        let contract = null;
+        let userAddress = null;
+        let isProcessing = false;
+
+        let localStats = {
+            gamesPlayed: 0,
+            wins: 0,
+            losses: 0,
+            draws: 0,
+            currentStreak: 0
+        };
+
+        // Initialize
+        function init() {
+            loadLocalStats();
+            updateStatsDisplay();
+            
+            // Check if wallet already connected
+            if (window.ethereum && window.ethereum.selectedAddress) {
+                connectWallet();
+            }
+        }
+
+        // Switch Mode
+        function switchMode(mode) {
+            if (isProcessing) return;
+            
+            currentMode = mode;
+            
+            document.querySelectorAll('.mode-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.closest('.mode-btn').classList.add('active');
+
+            const walletCard = document.getElementById('walletCard');
+            const leaderboard = document.getElementById('leaderboard');
+            
+            if (mode === 'chain') {
+                walletCard.classList.add('active');
+                leaderboard.style.display = 'block';
+                if (userAddress) {
+                    loadOnChainStats();
+                    loadLeaderboard();
+                }
+            } else {
+                walletCard.classList.remove('active');
+                leaderboard.style.display = 'none';
+                updateStatsDisplay();
+            }
+
+            resetGame();
+        }
+
+        // Connect Wallet
+        async function connectWallet() {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            try {
+                if (typeof window.ethereum === 'undefined') {
+                    showMessage('Please install MetaMask! 🦊', 'lose');
+                    return;
+                }
+
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                const chainId = await window.ethereum.request({
+                    method: 'eth_chainId'
+                });
+
+                if (chainId !== CELO_MAINNET_CHAIN_ID) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
+                        });
+                    } catch (switchError) {
+                        if (switchError.code === 4902) {
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: CELO_MAINNET_CHAIN_ID,
+                                    chainName: 'Celo Mainnet',
+                                    nativeCurrency: {
+                                        name: 'CELO',
+                                        symbol: 'CELO',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [CELO_RPC_URL],
+                                    blockExplorerUrls: ['https://explorer.celo.org']
+                                }]
+                            });
+                        }
+                    }
+                }
+
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                userAddress = accounts[0];
+
+                document.getElementById('walletLabel').textContent = 'Connected';
+                document.getElementById('walletAddress').textContent = 
+                    userAddress.substring(0, 8) + '...' + userAddress.substring(36);
+                document.getElementById('walletAddress').style.display = 'block';
+                document.getElementById('connectBtn').textContent = '✓';
+                document.getElementById('connectBtn').disabled = true;
+
+                await loadOnChainStats();
+                await loadLeaderboard();
+
+                showMessage('Wallet connected! 🎉', 'win');
+            } catch (error) {
+                console.error('Connection error:', error);
+                showMessage('Connection failed 😞', 'lose');
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // Start Game
+        async function startGame() {
+            if (isProcessing) return;
+            
+            if (currentMode === 'chain' && !userAddress) {
+                showMessage('Connect wallet first! 🔗', 'lose');
+                return;
+            }
+
+            isProcessing = true;
+            
+            try {
+                if (currentMode === 'chain') {
+                    showMessage('Starting on-chain... ⏳');
+                    const tx = await contract.startGame();
+                    await tx.wait();
+                }
+
+                gameActive = true;
+                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                currentTurn = 1;
+                
+                updateBoardDisplay();
+                document.getElementById('startBtn').disabled = true;
+                document.getElementById('resetBtn').disabled = false;
+                showMessage('Your turn! Tap a cell 👆');
+            } catch (error) {
+                console.error('Start error:', error);
+                showMessage('Failed to start 😞', 'lose');
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // Make Move
+        async function makeMove(position) {
+            if (!gameActive || currentTurn !== 1 || board[position] !== 0 || isProcessing) {
+                return;
+            }
+
+            isProcessing = true;
+            
+            try {
+                if (currentMode === 'chain') {
+                    showMessage('Making move... ⏳');
+                    const tx = await contract.makeMove(position);
+                    await tx.wait();
+                    
+                    const contractBoard = await contract.getBoard(userAddress);
+                    board = contractBoard.map(n => n.toNumber());
+                    
+                    updateBoardDisplay();
+                    
+                    // Check game end on chain
+                    const stats = await contract.getPlayerStats(userAddress);
+                    // Game ended, refresh stats
+                    setTimeout(() => {
+                        loadOnChainStats();
+                        loadLeaderboard();
+                    }, 1000);
+                } else {
+                    board[position] = 1;
+                    updateBoardDisplay();
+
+                    if (checkWin(1)) {
+                        endGame('win');
+                        isProcessing = false;
+                        return;
+                    }
+
+                    if (board.every(cell => cell !== 0)) {
+                        endGame('draw');
+                        isProcessing = false;
+                        return;
+                    }
+
+                    currentTurn = 2;
+                    showMessage('AI thinking... 🤔');
+                    
+                    setTimeout(() => {
+                        makeAIMove();
+                        isProcessing = false;
+                    }, 600);
+                    return; // Don't set isProcessing to false yet
+                }
+            } catch (error) {
+                console.error('Move error:', error);
+                showMessage('Move failed 😞', 'lose');
+            } finally {
+                if (currentMode === 'chain') {
+                    isProcessing = false;
+                }
+            }
+        }
+
+        // AI Move
+        function makeAIMove() {
+            let move = findWinningMove(2);
+            if (move === -1) move = findWinningMove(1);
+            if (move === -1 && board[4] === 0) move = 4;
+            if (move === -1) {
+                const corners = [0, 2, 6, 8];
+                for (let corner of corners) {
+                    if (board[corner] === 0) {
+                        move = corner;
+                        break;
+                    }
+                }
+            }
+            if (move === -1) {
+                for (let i = 0; i < 9; i++) {
+                    if (board[i] === 0) {
+                        move = i;
+                        break;
+                    }
+                }
+            }
+
+            board[move] = 2;
+            updateBoardDisplay();
+
+            if (checkWin(2)) {
+                endGame('lose');
+                return;
+            }
+
+            if (board.every(cell => cell !== 0)) {
+                endGame('draw');
+                return;
+            }
+
+            currentTurn = 1;
+            showMessage('Your turn! 👆');
+        }
+
+        // Find Winning Move
+        function findWinningMove(player) {
+            for (let i = 0; i < 9; i++) {
+                if (board[i] === 0) {
+                    board[i] = player;
+                    if (checkWin(player)) {
+                        board[i] = 0;
+                        return i;
+                    }
+                    board[i] = 0;
+                }
+            }
+            return -1;
+        }
+
+        // Check Win
+        function checkWin(player) {
+            const lines = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8],
+                [0, 3, 6], [1, 4, 7], [2, 5, 8],
+                [0, 4, 8], [2, 4, 6]
+            ];
+
+            return lines.some(line => 
+                line.every(index => board[index] === player)
+            );
+        }
+
+        // End Game
+        function endGame(result) {
+            gameActive = false;
+            
+            if (currentMode === 'free') {
+                localStats.gamesPlayed++;
+                
+                if (result === 'win') {
+                    localStats.wins++;
+                    localStats.currentStreak++;
+                    showMessage('🎉 Victory! You Win!', 'win');
+                } else if (result === 'lose') {
+                    localStats.losses++;
+                    localStats.currentStreak = 0;
+                    showMessage('😢 AI Wins! Try Again', 'lose');
+                } else {
+                    localStats.draws++;
+                    showMessage('🤝 Draw! Well Played', 'draw');
+                }
+                
+                saveLocalStats();
+                updateStatsDisplay();
+            }
+
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = false;
+        }
+
+        // Reset Game
+        function resetGame() {
+            if (isProcessing) return;
+            
+            gameActive = false;
+            board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+            currentTurn = 1;
+            updateBoardDisplay();
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('resetBtn').disabled = true;
+            showMessage('Click Start to begin! 🚀');
+        }
+
+        // Update Board Display
+        function updateBoardDisplay() {
+            const cells = document.querySelectorAll('.cell');
+            cells.forEach((cell, index) => {
+                cell.classList.remove('filled', 'x', 'o');
+                if (board[index] === 1) {
+                    cell.textContent = 'X';
+                    cell.classList.add('filled', 'x');
+                } else if (board[index] === 2) {
+                    cell.textContent = 'O';
+                    cell.classList.add('filled', 'o');
+                } else {
+                    cell.textContent = '';
+                }
+            });
+        }
+
+        // Show Message
+        function showMessage(message, type = '') {
+            const banner = document.getElementById('statusBanner');
+            banner.textContent = message;
+            banner.className = 'status-banner ' + type;
+        }
+
+        // Load On-Chain Stats
+        async function loadOnChainStats() {
+            if (!contract || !userAddress) return;
+
+            try {
+                const stats = await contract.getPlayerStats(userAddress);
+                
+                document.getElementById('statGames').textContent = stats.gamesPlayed.toString();
+                document.getElementById('statWins').textContent = stats.wins.toString();
+                document.getElementById('statLosses').textContent = stats.losses.toString();
+                document.getElementById('statDraws').textContent = stats.draws.toString();
+                document.getElementById('statWinRate').textContent = 
+                    (stats.winRate.toNumber() / 100).toFixed(1) + '%';
+                document.getElementById('statStreak').textContent = stats.currentStreak.toString();
+            } catch (error) {
+                console.error('Load stats error:', error);
+            }
+        }
+
+        // Load Leaderboard
+        async function loadLeaderboard() {
+            if (!contract) return;
+
+            const content = document.getElementById('leaderboardContent');
+            content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+            try {
+                const leaderboard = await contract.getLeaderboard();
+
+                if (leaderboard.length === 0) {
+                    content.innerHTML = '<div class="empty">No players yet! 🎮<br>Be the first to play!</div>';
+                    return;
+                }
+
+                let html = '';
+                const medals = ['🥇', '🥈', '🥉'];
+                
+                leaderboard.slice(0, 10).forEach((entry, index) => {
+                    const addr = entry.player.substring(0, 6) + '...' + entry.player.substring(38);
+                    const winRate = (entry.winRate.toNumber() / 100).toFixed(1) + '%';
+                    const rankClass = index < 3 ? 'top3' : '';
+                    const medal = index < 3 ? medals[index] : `#${index + 1}`;
+                    
+                    html += `
+                        <div class="leaderboard-item">
+                            <div class="leaderboard-rank ${rankClass}">${medal}</div>
+                            <div class="leaderboard-info">
+                                <div class="leaderboard-address">${addr}</div>
+                                <div class="leaderboard-stats">${winRate} WR · 🔥 ${entry.bestStreak}</div>
+                            </div>
+                            <div class="leaderboard-wins">${entry.wins} 🏆</div>
+                        </div>
+                    `;
+                });
+
+                content.innerHTML = html;
+            } catch (error) {
+                console.error('Load leaderboard error:', error);
+                content.innerHTML = '<div class="error">Failed to load 😞</div>';
+            }
+        }
+
+        // Local Storage
+        function loadLocalStats() {
+            const saved = localStorage.getItem('tictactoe_stats');
+            if (saved) {
+                localStats = JSON.parse(saved);
+            }
+        }
+
+        function saveLocalStats() {
+            localStorage.setItem('tictactoe_stats', JSON.stringify(localStats));
+        }
+
+        function updateStatsDisplay() {
+            if (currentMode === 'free') {
+                document.getElementById('statGames').textContent = localStats.gamesPlayed;
+                document.getElementById('statWins').textContent = localStats.wins;
+                document.getElementById('statLosses').textContent = localStats.losses;
+                document.getElementById('statDraws').textContent = localStats.draws;
+                
+                const winRate = localStats.gamesPlayed > 0 
+                    ? ((localStats.wins / localStats.gamesPlayed) * 100).toFixed(1)
+                    : 0;
+                document.getElementById('statWinRate').textContent = winRate + '%';
+                document.getElementById('statStreak').textContent = localStats.currentStreak;
+            }
+        }
+
+        // Event Listeners
+        window.addEventListener('load', init);
+
+        // Handle account/network changes
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    userAddress = null;
+                    document.getElementById('walletLabel').textContent = 'Wallet Status';
+                    document.getElementById('walletAddress').style.display = 'none';
+                    document.getElementById('connectBtn').textContent = 'Connect';
+                    document.getElementById('connectBtn').disabled = false;
+                    resetGame();
+                } else {
+                    location.reload();
+                }
+            });
+
+            window.ethereum.on('chainChanged', () => {
+                location.reload();
+            });
+        }
+    </script>
+</body>
+</html>
