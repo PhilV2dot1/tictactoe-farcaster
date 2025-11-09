@@ -3,7 +3,7 @@
     "header": "eyJmaWQiOjQ5MTM1MCwidHlwZSI6ImF1dGgiLCJrZXkiOiIweGYxOTM1NmFEQmZiMjcwZDc5MmIwZkExMjBlNzQ0RTQ3OTI2QTA2ZDAifQ",
     "payload": "eyJkb21haW4iOiJodHRwcyJ9",
     "signature": "gp/BmiwqMUJ4Zijv6EHwzpNQ7QdyOp1qexgBwQ5FogoFAL4VrE6IVCIQofNBSZg2mhPF0wUlfrMh70/a4/lXBxs="
-  }
+  },
   "frame": {
     "version": "1",
     "name": "Tic Tac Toe",

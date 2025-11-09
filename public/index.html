@@ -64,8 +64,10 @@
             font-size: 1.5em;
             font-weight: 700;
             background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
+            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
+            color: transparent;
             margin-bottom: 4px;
         }
 
@@ -740,62 +742,75 @@
             isProcessing = true;
             
             try {
-                // Check if we're in Farcaster
-                const isFarcaster = window.ethereum?.isFarcaster || 
-                                   window.ethereum?.providers?.some(p => p.isFarcaster);
-                
-                if (isFarcaster) {
-                    // Use Farcaster's wallet directly
-                    const accounts = await window.ethereum.request({
+                // Check if any wallet is available
+                if (!window.ethereum) {
+                    showMessage('No wallet found! Please install MetaMask or use Farcaster app 🦊', 'lose');
+                    isProcessing = false;
+                    return;
+                }
+
+                showMessage('Requesting wallet connection... 🔗');
+                console.log('Starting wallet connection...');
+
+                // Request accounts
+                let accounts;
+                try {
+                    accounts = await window.ethereum.request({
                         method: 'eth_requestAccounts'
                     });
-                    
+                    console.log('Accounts received:', accounts);
+                } catch (reqError) {
+                    console.error('Account request error:', reqError);
+                    showMessage('User rejected connection 😞', 'lose');
+                    isProcessing = false;
+                    return;
+                }
+
+                if (!accounts || accounts.length === 0) {
+                    showMessage('No accounts found 😞', 'lose');
+                    isProcessing = false;
+                    return;
+                }
+
+                userAddress = accounts[0];
+                console.log('Connected address:', userAddress);
+
+                // Create provider and signer
+                try {
                     provider = new ethers.providers.Web3Provider(window.ethereum);
                     signer = provider.getSigner();
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                    userAddress = accounts[0];
-                    
-                    // Check network and switch if needed
-                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                    if (chainId !== CELO_MAINNET_CHAIN_ID) {
-                        try {
-                            await window.ethereum.request({
-                                method: 'wallet_switchEthereumChain',
-                                params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
-                            });
-                        } catch (switchError) {
-                            if (switchError.code === 4902) {
-                                await window.ethereum.request({
-                                    method: 'wallet_addEthereumChain',
-                                    params: [{
-                                        chainId: CELO_MAINNET_CHAIN_ID,
-                                        chainName: 'Celo Mainnet',
-                                        nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-                                        rpcUrls: [CELO_RPC_URL],
-                                        blockExplorerUrls: ['https://explorer.celo.org']
-                                    }]
-                                });
-                            }
-                        }
-                    }
-                } else if (typeof window.ethereum !== 'undefined') {
-                    // Fallback to MetaMask or other wallet
-                    const accounts = await window.ethereum.request({
-                        method: 'eth_requestAccounts'
-                    });
+                    console.log('Provider created');
+                } catch (providerError) {
+                    console.error('Provider error:', providerError);
+                    showMessage('Failed to create provider 😞', 'lose');
+                    isProcessing = false;
+                    return;
+                }
 
-                    const chainId = await window.ethereum.request({
-                        method: 'eth_chainId'
-                    });
+                // Check network
+                showMessage('Checking network... 🌐');
+                let currentChainId;
+                try {
+                    currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    console.log('Current chain ID:', currentChainId);
+                } catch (chainError) {
+                    console.error('Chain ID error:', chainError);
+                }
 
-                    if (chainId !== CELO_MAINNET_CHAIN_ID) {
-                        try {
-                            await window.ethereum.request({
-                                method: 'wallet_switchEthereumChain',
-                                params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
-                            });
-                        } catch (switchError) {
-                            if (switchError.code === 4902) {
+                // Switch to Celo if needed
+                if (currentChainId !== CELO_MAINNET_CHAIN_ID) {
+                    showMessage('Switching to Celo network... 🔄');
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_switchEthereumChain',
+                            params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
+                        });
+                        console.log('Switched to Celo');
+                    } catch (switchError) {
+                        console.log('Switch error:', switchError);
+                        // If Celo is not added, add it
+                        if (switchError.code === 4902 || switchError.code === -32603) {
+                            try {
                                 await window.ethereum.request({
                                     method: 'wallet_addEthereumChain',
                                     params: [{
@@ -810,34 +825,58 @@
                                         blockExplorerUrls: ['https://explorer.celo.org']
                                     }]
                                 });
+                                console.log('Celo network added');
+                            } catch (addError) {
+                                console.error('Add network error:', addError);
+                                showMessage('Please add Celo network manually 😞', 'lose');
+                                isProcessing = false;
+                                return;
                             }
+                        } else {
+                            console.error('Network switch failed:', switchError);
+                            showMessage('Please switch to Celo network 😞', 'lose');
+                            isProcessing = false;
+                            return;
                         }
                     }
+                }
 
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
+                // Create contract instance
+                showMessage('Connecting to contract... 📝');
+                try {
                     contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                    userAddress = accounts[0];
-                } else {
-                    showMessage('Please install MetaMask! 🦊', 'lose');
+                    console.log('Contract created');
+                } catch (contractError) {
+                    console.error('Contract error:', contractError);
+                    showMessage('Failed to connect to contract 😞', 'lose');
                     isProcessing = false;
                     return;
                 }
 
+                // Update UI
                 document.getElementById('walletLabel').textContent = 'Connected';
                 document.getElementById('walletAddress').textContent = 
                     userAddress.substring(0, 8) + '...' + userAddress.substring(36);
                 document.getElementById('walletAddress').style.display = 'block';
-                document.getElementById('connectBtn').textContent = '✓';
+                document.getElementById('connectBtn').textContent = '✓ Connected';
                 document.getElementById('connectBtn').disabled = true;
 
-                await loadOnChainStats();
-                await loadLeaderboard();
+                // Load stats
+                showMessage('Loading your stats... 📊');
+                try {
+                    await loadOnChainStats();
+                    await loadLeaderboard();
+                } catch (statsError) {
+                    console.error('Stats error:', statsError);
+                    // Continue anyway
+                }
 
-                showMessage('Wallet connected! 🎉', 'win');
+                showMessage('Wallet connected successfully! 🎉', 'win');
+                console.log('Connection complete!');
+
             } catch (error) {
-                console.error('Connection error:', error);
-                showMessage('Connection failed 😞', 'lose');
+                console.error('Unexpected error:', error);
+                showMessage('Connection failed: ' + error.message + ' 😞', 'lose');
             } finally {
                 isProcessing = false;
             }
