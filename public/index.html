@@ -14,22 +14,23 @@
         }
 
         :root {
-            --primary: #8A63D2;
-            --primary-dark: #6B4BA8;
-            --secondary: #4CAF50;
+            --primary: #35D07F;
+            --primary-dark: #2AB56F;
+            --secondary: #FBCC5C;
             --danger: #FF5252;
             --warning: #FFA726;
-            --bg-dark: #1A1625;
-            --bg-card: #2D2438;
-            --text-primary: #FFFFFF;
-            --text-secondary: #B8A8D8;
-            --shadow: 0 4px 20px rgba(138, 99, 210, 0.3);
-            --shadow-hover: 0 8px 30px rgba(138, 99, 210, 0.4);
+            --bg-dark: #1A1A1A;
+            --bg-card: #2A2A2A;
+            --bg-yellow: #FCFF52;
+            --text-primary: #1A1A1A;
+            --text-secondary: #4A4A4A;
+            --shadow: 0 4px 20px rgba(53, 208, 127, 0.3);
+            --shadow-hover: 0 8px 30px rgba(53, 208, 127, 0.4);
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-            background: linear-gradient(135deg, #1A1625 0%, #2D1B3D 100%);
+            background: linear-gradient(135deg, #FCFF52 0%, #FFE55C 100%);
             min-height: 100vh;
             color: var(--text-primary);
             overflow-x: hidden;
@@ -61,7 +62,7 @@
         .title {
             font-size: 1.5em;
             font-weight: 700;
-            background: linear-gradient(135deg, var(--primary) 0%, #B794F4 100%);
+            background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
@@ -70,6 +71,7 @@
         .subtitle {
             font-size: 0.75em;
             color: var(--text-secondary);
+            font-weight: 600;
         }
 
         /* Mode Toggle */
@@ -77,11 +79,11 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 8px;
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.9);
             padding: 6px;
             border-radius: 16px;
             margin-bottom: 16px;
-            box-shadow: inset 0 2px 8px rgba(0,0,0,0.3);
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
         }
 
         .mode-btn {
@@ -101,20 +103,21 @@
         }
 
         .mode-btn.active {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-            color: var(--text-primary);
-            box-shadow: var(--shadow);
+            background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(53, 208, 127, 0.3);
             transform: translateY(-2px);
         }
 
         /* Wallet Card */
         .wallet-card {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
             display: none;
             animation: fadeIn 0.3s ease;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .wallet-card.active {
@@ -143,7 +146,7 @@
             font-family: 'Courier New', monospace;
             font-size: 0.85em;
             color: var(--text-primary);
-            background: rgba(138, 99, 210, 0.2);
+            background: rgba(53, 208, 127, 0.15);
             padding: 6px 10px;
             border-radius: 8px;
             overflow: hidden;
@@ -174,7 +177,7 @@
         }
 
         .btn-primary {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
             color: white;
         }
 
@@ -190,17 +193,17 @@
 
         /* Game Card */
         .game-card {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
             padding: 20px;
             margin-bottom: 16px;
-            box-shadow: var(--shadow);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
 
         /* Status Banner */
         .status-banner {
-            background: linear-gradient(135deg, rgba(138, 99, 210, 0.2) 0%, rgba(107, 75, 168, 0.2) 100%);
-            border-left: 4px solid var(--primary);
+            background: linear-gradient(135deg, rgba(53, 208, 127, 0.2) 0%, rgba(42, 181, 111, 0.2) 100%);
+            border-left: 4px solid #35D07F;
             padding: 12px 16px;
             border-radius: 12px;
             margin-bottom: 20px;
@@ -212,6 +215,7 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            color: var(--text-primary);
         }
 
         .status-banner.win {
@@ -246,8 +250,8 @@
 
         .cell {
             aspect-ratio: 1;
-            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
-            border: 2px solid rgba(138, 99, 210, 0.3);
+            background: linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%);
+            border: 3px solid rgba(53, 208, 127, 0.3);
             border-radius: 16px;
             font-size: clamp(2.5em, 8vw, 3.5em);
             font-weight: 700;
@@ -265,7 +269,7 @@
             content: '';
             position: absolute;
             inset: 0;
-            background: linear-gradient(135deg, rgba(138, 99, 210, 0.2) 0%, rgba(107, 75, 168, 0.1) 100%);
+            background: linear-gradient(135deg, rgba(53, 208, 127, 0.1) 0%, rgba(42, 181, 111, 0.05) 100%);
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -280,18 +284,18 @@
 
         .cell.filled {
             cursor: not-allowed;
-            border-color: rgba(138, 99, 210, 0.6);
+            border-color: rgba(53, 208, 127, 0.6);
         }
 
         .cell.x {
-            color: var(--primary);
-            text-shadow: 0 0 20px rgba(138, 99, 210, 0.8);
+            color: #35D07F;
+            text-shadow: 0 0 20px rgba(53, 208, 127, 0.5);
             animation: placeX 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
         .cell.o {
-            color: var(--secondary);
-            text-shadow: 0 0 20px rgba(76, 175, 80, 0.8);
+            color: #FBCC5C;
+            text-shadow: 0 0 20px rgba(251, 204, 92, 0.5);
             animation: placeO 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
@@ -310,10 +314,11 @@
 
         /* Stats Grid */
         .stats-section {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .stats-header {
@@ -323,6 +328,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            color: var(--text-primary);
         }
 
         .stats-grid {
@@ -332,17 +338,17 @@
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
+            background: linear-gradient(135deg, #F8F8F8 0%, #FFFFFF 100%);
             border-radius: 12px;
             padding: 12px;
             text-align: center;
-            border: 1px solid rgba(138, 99, 210, 0.2);
+            border: 2px solid rgba(53, 208, 127, 0.2);
         }
 
         .stat-value {
             font-size: 1.8em;
             font-weight: 700;
-            color: var(--primary);
+            color: #35D07F;
             line-height: 1;
             margin-bottom: 4px;
         }
@@ -352,14 +358,16 @@
             color: var(--text-secondary);
             text-transform: uppercase;
             letter-spacing: 0.5px;
+            font-weight: 600;
         }
 
         /* Leaderboard */
         .leaderboard {
-            background: var(--bg-card);
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .leaderboard-scroll {
@@ -373,12 +381,12 @@
         }
 
         .leaderboard-scroll::-webkit-scrollbar-track {
-            background: rgba(138, 99, 210, 0.1);
+            background: rgba(53, 208, 127, 0.1);
             border-radius: 10px;
         }
 
         .leaderboard-scroll::-webkit-scrollbar-thumb {
-            background: var(--primary);
+            background: #35D07F;
             border-radius: 10px;
         }
 
@@ -387,16 +395,16 @@
             align-items: center;
             gap: 12px;
             padding: 12px;
-            background: linear-gradient(135deg, #3D2F52 0%, #2D2438 100%);
+            background: linear-gradient(135deg, #F8F8F8 0%, #FFFFFF 100%);
             border-radius: 12px;
             margin-bottom: 8px;
-            border: 1px solid rgba(138, 99, 210, 0.2);
+            border: 2px solid rgba(53, 208, 127, 0.2);
         }
 
         .leaderboard-rank {
             font-size: 1.2em;
             font-weight: 700;
-            color: var(--primary);
+            color: #35D07F;
             min-width: 30px;
         }
 
@@ -416,18 +424,20 @@
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
+            font-weight: 600;
         }
 
         .leaderboard-stats {
             font-size: 0.75em;
             color: var(--text-secondary);
             margin-top: 2px;
+            font-weight: 500;
         }
 
         .leaderboard-wins {
             font-size: 1.2em;
             font-weight: 700;
-            color: var(--secondary);
+            color: #FBCC5C;
             min-width: 50px;
             text-align: right;
         }
@@ -729,49 +739,89 @@
             isProcessing = true;
             
             try {
-                if (typeof window.ethereum === 'undefined') {
-                    showMessage('Please install MetaMask! 🦊', 'lose');
-                    return;
-                }
-
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
-
-                const chainId = await window.ethereum.request({
-                    method: 'eth_chainId'
-                });
-
-                if (chainId !== CELO_MAINNET_CHAIN_ID) {
-                    try {
-                        await window.ethereum.request({
-                            method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
-                        });
-                    } catch (switchError) {
-                        if (switchError.code === 4902) {
+                // Check if we're in Farcaster
+                const isFarcaster = window.ethereum?.isFarcaster || 
+                                   window.ethereum?.providers?.some(p => p.isFarcaster);
+                
+                if (isFarcaster) {
+                    // Use Farcaster's wallet directly
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
+                    
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                    userAddress = accounts[0];
+                    
+                    // Check network and switch if needed
+                    const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                    if (chainId !== CELO_MAINNET_CHAIN_ID) {
+                        try {
                             await window.ethereum.request({
-                                method: 'wallet_addEthereumChain',
-                                params: [{
-                                    chainId: CELO_MAINNET_CHAIN_ID,
-                                    chainName: 'Celo Mainnet',
-                                    nativeCurrency: {
-                                        name: 'CELO',
-                                        symbol: 'CELO',
-                                        decimals: 18
-                                    },
-                                    rpcUrls: [CELO_RPC_URL],
-                                    blockExplorerUrls: ['https://explorer.celo.org']
-                                }]
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
                             });
+                        } catch (switchError) {
+                            if (switchError.code === 4902) {
+                                await window.ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: CELO_MAINNET_CHAIN_ID,
+                                        chainName: 'Celo Mainnet',
+                                        nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                                        rpcUrls: [CELO_RPC_URL],
+                                        blockExplorerUrls: ['https://explorer.celo.org']
+                                    }]
+                                });
+                            }
                         }
                     }
-                }
+                } else if (typeof window.ethereum !== 'undefined') {
+                    // Fallback to MetaMask or other wallet
+                    const accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
 
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                userAddress = accounts[0];
+                    const chainId = await window.ethereum.request({
+                        method: 'eth_chainId'
+                    });
+
+                    if (chainId !== CELO_MAINNET_CHAIN_ID) {
+                        try {
+                            await window.ethereum.request({
+                                method: 'wallet_switchEthereumChain',
+                                params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
+                            });
+                        } catch (switchError) {
+                            if (switchError.code === 4902) {
+                                await window.ethereum.request({
+                                    method: 'wallet_addEthereumChain',
+                                    params: [{
+                                        chainId: CELO_MAINNET_CHAIN_ID,
+                                        chainName: 'Celo Mainnet',
+                                        nativeCurrency: {
+                                            name: 'CELO',
+                                            symbol: 'CELO',
+                                            decimals: 18
+                                        },
+                                        rpcUrls: [CELO_RPC_URL],
+                                        blockExplorerUrls: ['https://explorer.celo.org']
+                                    }]
+                                });
+                            }
+                        }
+                    }
+
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    signer = provider.getSigner();
+                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                    userAddress = accounts[0];
+                } else {
+                    showMessage('Please install MetaMask! 🦊', 'lose');
+                    isProcessing = false;
+                    return;
+                }
 
                 document.getElementById('walletLabel').textContent = 'Connected';
                 document.getElementById('walletAddress').textContent = 
