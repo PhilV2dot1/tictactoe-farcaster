@@ -1,0 +1,18 @@
+{
+  "accountAssociation": {
+    "header": "eyJmaWQiOjEsInR5cGUiOiJjdXN0b2R5Iiwia2V5IjoiMHhhMGIxYzJkM2U0ZjVhNmI3YzhkOWVhZmJjZGVmIn0",
+    "payload": "eyJkb21haW4iOiJ5b3VyLWFwcC52ZXJjZWwuYXBwIn0",
+    "signature": "MHg..."
+  },
+  "frame": {
+    "version": "vNext",
+    "name": "Tic Tac Toe",
+    "iconUrl": "https://tictactoe-farcaster.vercel.app/icon.png",
+    "homeUrl": "https://tictactoe-farcaster.vercel.app",
+    "imageUrl": "https://tictactoe-farcaster.vercel.app/frame-preview.png",
+    "buttonTitle": "Play Now",
+    "splashImageUrl": "https://tictactoe-farcaster.vercel.app/frame-preview.png",
+    "splashBackgroundColor": "#FCFF52",
+    "webhookUrl": "https://tictactoe-farcaster.vercel.app/api/frame"
+  }
+}
