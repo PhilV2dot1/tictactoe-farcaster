@@ -5,7 +5,7 @@
     "signature": "zFnACQ0gQhrO5W0fXKaOZrZLm+nA3bbRaTggccsFGvpa3Adz+jk1bj92ykervVFI4JzJ8O+ibG/G4CcynA9c7xw="
   },
   "frame": {
-    "version": "1",
+    "version": "1.0",
     "name": "Tic Tac Toe",
     "iconUrl": "https://tictactoe-farcaster.vercel.app/icon.png",
     "homeUrl": "https://tictactoe-farcaster.vercel.app",
