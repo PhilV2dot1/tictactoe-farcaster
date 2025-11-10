@@ -731,6 +731,8 @@
 
                 // Vérifier/switcher vers Celo
                 const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                console.log('Current chain:', chainId);
+                
                 if (chainId !== CELO_MAINNET_CHAIN_ID) {
                     showMessage('Switching to Celo... 🔄');
                     try {
@@ -760,6 +762,26 @@
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 console.log('✅ Contract ready');
 
+                // Vérifier s'il y a une partie active
+                try {
+                    const activeGameData = await contract.activeGames(userAddress);
+                    console.log('Active game status:', activeGameData.status);
+                    
+                    if (activeGameData.status === 0) { // GameStatus.Active
+                        showMessage('⚠️ You have an active game! Click Reset to abandon it', 'lose');
+                        
+                        // Charger le plateau existant
+                        const contractBoard = await contract.getBoard(userAddress);
+                        board = contractBoard.map(n => n.toNumber());
+                        updateBoardDisplay();
+                        gameActive = true;
+                        document.getElementById('startBtn').disabled = true;
+                        document.getElementById('resetBtn').disabled = false;
+                    }
+                } catch (gameCheckError) {
+                    console.log('No active game or error checking:', gameCheckError);
+                }
+
                 // Écouter les events du contrat
                 contract.on("GameEnded", (player, status, duration) => {
                     if (player.toLowerCase() === userAddress.toLowerCase()) {
@@ -782,7 +804,9 @@
                 await loadOnChainStats();
                 await loadLeaderboard();
 
-                showMessage('Connected! Ready to play 🎉', 'win');
+                if (!gameActive) {
+                    showMessage('Connected! Click Start Game 🎉', 'win');
+                }
 
             } catch (error) {
                 console.error('Connection error:', error);
@@ -808,31 +832,16 @@
             
             try {
                 if (currentMode === 'chain') {
-                    // Vérifier s'il y a déjà une partie active
-                    try {
-                        const activeGame = await contract.activeGames(userAddress);
-                        if (activeGame.status === 0) { // GameStatus.Active = 0
-                            showMessage('You have an active game! Click Reset first 🔄', 'lose');
-                            isProcessing = false;
-                            
-                            // Charger le plateau existant
-                            const contractBoard = await contract.getBoard(userAddress);
-                            board = contractBoard.map(n => n.toNumber());
-                            updateBoardDisplay();
-                            gameActive = true;
-                            document.getElementById('startBtn').disabled = true;
-                            document.getElementById('resetBtn').disabled = false;
-                            return;
-                        }
-                    } catch (checkError) {
-                        console.log('No active game found, starting new one');
-                    }
-                    
                     showMessage('Starting on-chain game... ⏳');
-                    const tx = await contract.startGame();
+                    
+                    // Appel direct sans vérification pour éviter l'erreur gas
+                    const tx = await contract.startGame({
+                        gasLimit: 500000 // Gas limit manuel
+                    });
+                    
                     showMessage('Waiting for confirmation... ⏳');
-                    await tx.wait();
-                    console.log('✅ Game started on-chain');
+                    const receipt = await tx.wait();
+                    console.log('✅ Game started:', receipt.transactionHash);
                 }
 
                 gameActive = true;
@@ -845,8 +854,18 @@
                 showMessage('Your turn! Tap a cell 👆');
             } catch (error) {
                 console.error('Start error:', error);
-                const errorMsg = error.reason || error.message || 'Unknown error';
-                showMessage('Failed to start: ' + errorMsg + ' 😞', 'lose');
+                
+                // Message d'erreur plus clair
+                if (error.message && error.message.includes('Partie deja en cours')) {
+                    showMessage('⚠️ Active game found! Click Reset to abandon it', 'lose');
+                    
+                    // Activer le bouton Reset
+                    document.getElementById('resetBtn').disabled = false;
+                    gameActive = true;
+                } else {
+                    const errorMsg = error.reason || error.message || 'Unknown error';
+                    showMessage('Failed: ' + errorMsg.substring(0, 50) + ' 😞', 'lose');
+                }
             } finally {
                 isProcessing = false;
             }
