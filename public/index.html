@@ -10,8 +10,7 @@
     <link rel="dns-prefetch" href="https://forno.celo.org">
     
     <!-- Scripts avec defer pour ne pas bloquer le rendu -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" defer></script>
-    <script src="https://unpkg.com/@farcaster/frame-sdk@0.1.2/dist/index.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
     <style>
         * {
@@ -593,17 +592,8 @@
     </div>
 
     <script>
-        // Init Farcaster SDK immédiatement
-        (async function() {
-            if (typeof window.fc !== 'undefined' && window.fc.FrameSDK) {
-                try {
-                    await window.fc.FrameSDK.actions.ready();
-                    console.log('✅ Farcaster Frame SDK ready');
-                } catch (e) {
-                    console.log('Farcaster SDK init:', e);
-                }
-            }
-        })();
+        // Pas d'init Farcaster SDK pour éviter l'erreur export
+        // Le SDK sera chargé si disponible mais pas obligatoire
 
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         const CELO_MAINNET_CHAIN_ID = "0xa4ec";
@@ -765,14 +755,19 @@
                 // Vérifier s'il y a une partie active
                 try {
                     const activeGameData = await contract.activeGames(userAddress);
-                    console.log('Active game status:', activeGameData.status);
+                    const gameStatus = parseInt(activeGameData.status.toString());
+                    console.log('Active game status:', gameStatus);
                     
-                    if (activeGameData.status === 0) { // GameStatus.Active
+                    if (gameStatus === 0) { // GameStatus.Active
                         showMessage('⚠️ You have an active game! Click Reset to abandon it', 'lose');
                         
                         // Charger le plateau existant
                         const contractBoard = await contract.getBoard(userAddress);
-                        board = contractBoard.map(n => n.toNumber());
+                        board = contractBoard.map(cell => {
+                            if (typeof cell === 'number') return cell;
+                            if (cell.toNumber) return cell.toNumber();
+                            return parseInt(cell.toString());
+                        });
                         updateBoardDisplay();
                         gameActive = true;
                         document.getElementById('startBtn').disabled = true;
@@ -890,7 +885,11 @@
                     
                     // Récupérer le plateau mis à jour
                     const contractBoard = await contract.getBoard(userAddress);
-                    board = contractBoard.map(n => n.toNumber());
+                    board = contractBoard.map(cell => {
+                        if (typeof cell === 'number') return cell;
+                        if (cell.toNumber) return cell.toNumber();
+                        return parseInt(cell.toString());
+                    });
                     updateBoardDisplay();
                     
                     // Vérifier si le jeu est terminé
