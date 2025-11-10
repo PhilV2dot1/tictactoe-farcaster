@@ -4,8 +4,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Tic Tac Toe - Celo</title>
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://unpkg.com/@farcaster/frame-sdk@0.1.2/dist/index.js"></script>
+    
+    <!-- Preconnect pour optimiser le chargement -->
+    <link rel="preconnect" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://forno.celo.org">
+    
+    <!-- Scripts avec defer pour ne pas bloquer le rendu -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js" defer></script>
+    <script src="https://unpkg.com/@farcaster/frame-sdk@0.1.2/dist/index.js" defer></script>
+    
     <style>
         * {
             margin: 0;
@@ -20,17 +27,14 @@
             --secondary: #FBCC5C;
             --danger: #FF5252;
             --warning: #FFA726;
-            --bg-dark: #1A1A1A;
-            --bg-card: #2A2A2A;
             --bg-yellow: #FCFF52;
             --text-primary: #1A1A1A;
             --text-secondary: #4A4A4A;
             --shadow: 0 4px 20px rgba(53, 208, 127, 0.3);
-            --shadow-hover: 0 8px 30px rgba(53, 208, 127, 0.4);
         }
 
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #FCFF52 0%, #FFE55C 100%);
             min-height: 100vh;
             color: var(--text-primary);
@@ -47,7 +51,6 @@
             flex-direction: column;
         }
 
-        /* Header */
         .header {
             text-align: center;
             margin-bottom: 16px;
@@ -57,7 +60,7 @@
         .logo {
             font-size: 2.5em;
             margin-bottom: 4px;
-            filter: drop-shadow(0 2px 8px rgba(138, 99, 210, 0.5));
+            filter: drop-shadow(0 2px 8px rgba(53, 208, 127, 0.5));
         }
 
         .title {
@@ -77,7 +80,6 @@
             font-weight: 600;
         }
 
-        /* Mode Toggle */
         .mode-toggle {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -98,7 +100,7 @@
             cursor: pointer;
             font-size: 0.9em;
             font-weight: 600;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -112,19 +114,18 @@
             transform: translateY(-2px);
         }
 
-        /* Wallet Card */
         .wallet-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
             padding: 16px;
             margin-bottom: 16px;
             display: none;
-            animation: fadeIn 0.3s ease;
             box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .wallet-card.active {
             display: block;
+            animation: fadeIn 0.3s ease;
         }
 
         .wallet-status {
@@ -164,7 +165,7 @@
             font-weight: 600;
             font-size: 0.9em;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
             box-shadow: var(--shadow);
             white-space: nowrap;
         }
@@ -185,16 +186,15 @@
         }
 
         .btn-success {
-            background: linear-gradient(135deg, var(--secondary) 0%, #45a049 100%);
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
         }
 
         .btn-danger {
-            background: linear-gradient(135deg, var(--danger) 0%, #e04545 100%);
+            background: linear-gradient(135deg, #FF5252 0%, #e04545 100%);
             color: white;
         }
 
-        /* Game Card */
         .game-card {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 20px;
@@ -203,7 +203,6 @@
             box-shadow: 0 8px 32px rgba(0,0,0,0.12);
         }
 
-        /* Status Banner */
         .status-banner {
             background: linear-gradient(135deg, rgba(53, 208, 127, 0.2) 0%, rgba(42, 181, 111, 0.2) 100%);
             border-left: 4px solid #35D07F;
@@ -213,7 +212,6 @@
             font-size: 0.95em;
             font-weight: 600;
             text-align: center;
-            animation: slideIn 0.3s ease;
             min-height: 44px;
             display: flex;
             align-items: center;
@@ -223,20 +221,19 @@
 
         .status-banner.win {
             background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(69, 160, 73, 0.2) 100%);
-            border-left-color: var(--secondary);
+            border-left-color: #4CAF50;
         }
 
         .status-banner.lose {
             background: linear-gradient(135deg, rgba(255, 82, 82, 0.2) 0%, rgba(224, 69, 69, 0.2) 100%);
-            border-left-color: var(--danger);
+            border-left-color: #FF5252;
         }
 
         .status-banner.draw {
             background: linear-gradient(135deg, rgba(255, 167, 38, 0.2) 0%, rgba(255, 152, 0, 0.2) 100%);
-            border-left-color: var(--warning);
+            border-left-color: #FFA726;
         }
 
-        /* Game Board */
         .board-container {
             aspect-ratio: 1;
             max-width: 380px;
@@ -259,26 +256,17 @@
             font-size: clamp(2.5em, 8vw, 3.5em);
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
             position: relative;
-            overflow: hidden;
             user-select: none;
         }
 
-        .cell::before {
-            content: '';
-            position: absolute;
-            inset: 0;
+        .cell:hover:not(.filled) {
             background: linear-gradient(135deg, rgba(53, 208, 127, 0.1) 0%, rgba(42, 181, 111, 0.05) 100%);
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
-
-        .cell:hover:not(.filled)::before {
-            opacity: 1;
+            transform: scale(1.05);
         }
 
         .cell:active:not(.filled) {
@@ -302,7 +290,6 @@
             animation: placeO 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        /* Controls */
         .game-controls {
             display: flex;
             gap: 10px;
@@ -315,7 +302,6 @@
             font-size: 1em;
         }
 
-        /* Stats Grid */
         .stats-section {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
@@ -364,7 +350,6 @@
             font-weight: 600;
         }
 
-        /* Leaderboard */
         .leaderboard {
             background: rgba(255, 255, 255, 0.95);
             border-radius: 16px;
@@ -377,20 +362,6 @@
             max-height: 300px;
             overflow-y: auto;
             margin-top: 12px;
-        }
-
-        .leaderboard-scroll::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .leaderboard-scroll::-webkit-scrollbar-track {
-            background: rgba(53, 208, 127, 0.1);
-            border-radius: 10px;
-        }
-
-        .leaderboard-scroll::-webkit-scrollbar-thumb {
-            background: #35D07F;
-            border-radius: 10px;
         }
 
         .leaderboard-item {
@@ -445,29 +416,23 @@
             text-align: right;
         }
 
-        /* Loading & Error */
-        .loading, .error, .empty {
+        .loading {
             text-align: center;
             padding: 20px;
             color: var(--text-secondary);
             font-size: 0.9em;
         }
 
-        .error {
-            color: var(--danger);
-        }
-
         .spinner {
-            border: 3px solid rgba(138, 99, 210, 0.2);
-            border-top: 3px solid var(--primary);
+            border: 3px solid rgba(53, 208, 127, 0.2);
+            border-top: 3px solid #35D07F;
             border-radius: 50%;
             width: 30px;
             height: 30px;
             animation: spin 1s linear infinite;
-            margin: 0 auto;
+            margin: 0 auto 10px;
         }
 
-        /* Animations */
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -481,17 +446,6 @@
             to {
                 opacity: 1;
                 transform: translateY(0);
-            }
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
             }
         }
 
@@ -521,38 +475,24 @@
             to { transform: rotate(360deg); }
         }
 
-        /* Responsive */
         @media (max-width: 400px) {
             .app-container {
                 padding: 8px;
             }
-
             .stats-grid {
                 grid-template-columns: repeat(2, 1fr);
-            }
-
-            .cell {
-                border-radius: 12px;
-            }
-        }
-
-        @media (min-height: 800px) {
-            .app-container {
-                justify-content: center;
             }
         }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <!-- Header -->
         <div class="header">
             <div class="logo">🎮</div>
             <h1 class="title">Tic Tac Toe</h1>
             <p class="subtitle">Powered by Celo</p>
         </div>
 
-        <!-- Mode Toggle -->
         <div class="mode-toggle">
             <button class="mode-btn active" onclick="switchMode('free')">
                 <span>🎯</span>
@@ -564,27 +504,23 @@
             </button>
         </div>
 
-        <!-- Wallet Card -->
         <div class="wallet-card" id="walletCard">
             <div class="wallet-status">
                 <div class="wallet-info">
-                    <div class="wallet-label" id="walletLabel">Wallet Status</div>
+                    <div class="wallet-label" id="walletLabel">Not connected</div>
                     <div class="wallet-address" id="walletAddress" style="display:none;"></div>
                 </div>
-                <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
-                    Connect
+                <button class="btn btn-primary" id="connectBtn" style="display:none;">
+                    Connecting...
                 </button>
             </div>
         </div>
 
-        <!-- Game Card -->
         <div class="game-card">
-            <!-- Status -->
             <div class="status-banner" id="statusBanner">
                 Click Start to begin! 🚀
             </div>
 
-            <!-- Board -->
             <div class="board-container">
                 <div class="game-board" id="gameBoard">
                     <div class="cell" onclick="makeMove(0)"></div>
@@ -599,7 +535,6 @@
                 </div>
             </div>
 
-            <!-- Controls -->
             <div class="game-controls">
                 <button class="btn btn-success" id="startBtn" onclick="startGame()">
                     Start Game
@@ -610,7 +545,6 @@
             </div>
         </div>
 
-        <!-- Stats -->
         <div class="stats-section">
             <div class="stats-header">
                 <span>📊</span>
@@ -644,7 +578,6 @@
             </div>
         </div>
 
-        <!-- Leaderboard -->
         <div class="leaderboard" id="leaderboard" style="display:none;">
             <div class="stats-header">
                 <span>🏆</span>
@@ -653,13 +586,25 @@
             <div class="leaderboard-scroll" id="leaderboardContent">
                 <div class="loading">
                     <div class="spinner"></div>
+                    Loading...
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Contract Configuration
+        // Init Farcaster SDK immédiatement
+        (async function() {
+            if (typeof window.fc !== 'undefined' && window.fc.FrameSDK) {
+                try {
+                    await window.fc.FrameSDK.actions.ready();
+                    console.log('✅ Farcaster Frame SDK ready');
+                } catch (e) {
+                    console.log('Farcaster SDK init:', e);
+                }
+            }
+        })();
+
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         const CELO_MAINNET_CHAIN_ID = "0xa4ec";
         const CELO_RPC_URL = "https://forno.celo.org";
@@ -667,20 +612,21 @@
         const CONTRACT_ABI = [
             "function startGame() external",
             "function makeMove(uint8 position) external",
-            "function forfeitGame() external",
             "function getBoard(address player) external view returns (uint8[9])",
-            "function getPlayerStats(address player) external view returns (uint256 gamesPlayed, uint256 wins, uint256 losses, uint256 draws, uint256 winRate, uint256 currentStreak, uint256 bestStreak, uint256 fastestWin)",
+            "function getPlayerStats(address player) external view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
             "function getLeaderboard() external view returns (tuple(address player, uint256 wins, uint256 winRate, uint256 bestStreak, uint256 fastestWin)[])",
             "event GameStarted(address indexed player, uint256 timestamp)",
             "event MoveMade(address indexed player, uint8 position, uint8 playerType)",
             "event GameEnded(address indexed player, uint8 status, uint256 duration)"
         ];
 
-        // Game State
         let currentMode = 'free';
         let gameActive = false;
         let board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
         let currentTurn = 1;
+        
+        // État de connexion PERSISTANT
+        let walletConnected = false;
         let provider = null;
         let signer = null;
         let contract = null;
@@ -695,26 +641,34 @@
             currentStreak: 0
         };
 
-        // Initialize
-        function init() {
-            loadLocalStats();
-            updateStatsDisplay();
-            
-            // Check if wallet already connected
-            if (window.ethereum && window.ethereum.selectedAddress) {
-                connectWallet();
+        // Attendre le chargement d'ethers
+        function waitForEthers(callback, attempts = 0) {
+            if (typeof ethers !== 'undefined') {
+                callback();
+            } else if (attempts < 20) {
+                setTimeout(() => waitForEthers(callback, attempts + 1), 100);
+            } else {
+                console.error('Ethers.js failed to load');
+                showMessage('Error loading libraries. Please refresh 🔄', 'lose');
             }
         }
 
-        // Switch Mode
-        function switchMode(mode) {
+        function init() {
+            waitForEthers(() => {
+                console.log('✅ Ethers loaded:', ethers.version);
+                loadLocalStats();
+                updateStatsDisplay();
+                showMessage('Ready to play! 🎮');
+            });
+        }
+
+        // CONNEXION UNIQUE au switch vers On-Chain
+        async function switchMode(mode) {
             if (isProcessing) return;
             
             currentMode = mode;
             
-            document.querySelectorAll('.mode-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
+            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
             event.target.closest('.mode-btn').classList.add('active');
 
             const walletCard = document.getElementById('walletCard');
@@ -723,9 +677,13 @@
             if (mode === 'chain') {
                 walletCard.classList.add('active');
                 leaderboard.style.display = 'block';
-                if (userAddress) {
-                    loadOnChainStats();
-                    loadLeaderboard();
+                
+                // CONNEXION AUTOMATIQUE si pas encore connecté
+                if (!walletConnected) {
+                    await connectWalletOnce();
+                } else {
+                    await loadOnChainStats();
+                    await loadLeaderboard();
                 }
             } else {
                 walletCard.classList.remove('active');
@@ -736,158 +694,111 @@
             resetGame();
         }
 
-        // Connect Wallet
-        async function connectWallet() {
-            if (isProcessing) return;
+        // CONNEXION UNE SEULE FOIS
+        async function connectWalletOnce() {
+            if (walletConnected || isProcessing) return;
             isProcessing = true;
             
+            const connectBtn = document.getElementById('connectBtn');
+            connectBtn.style.display = 'block';
+            connectBtn.disabled = true;
+            
             try {
-                // Check if any wallet is available
                 if (!window.ethereum) {
-                    showMessage('No wallet found! Please install MetaMask or use Farcaster app 🦊', 'lose');
-                    isProcessing = false;
+                    showMessage('Please install MetaMask or use Farcaster! 🦊', 'lose');
+                    connectBtn.textContent = 'No Wallet';
                     return;
                 }
 
-                showMessage('Requesting wallet connection... 🔗');
-                console.log('Starting wallet connection...');
+                showMessage('Connecting wallet... 🔗');
+                connectBtn.textContent = 'Connecting...';
 
-                // Request accounts
-                let accounts;
-                try {
-                    accounts = await window.ethereum.request({
-                        method: 'eth_requestAccounts'
-                    });
-                    console.log('Accounts received:', accounts);
-                } catch (reqError) {
-                    console.error('Account request error:', reqError);
-                    showMessage('User rejected connection 😞', 'lose');
-                    isProcessing = false;
-                    return;
-                }
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
 
                 if (!accounts || accounts.length === 0) {
-                    showMessage('No accounts found 😞', 'lose');
-                    isProcessing = false;
-                    return;
+                    throw new Error('No accounts found');
                 }
 
                 userAddress = accounts[0];
-                console.log('Connected address:', userAddress);
+                console.log('✅ Connected:', userAddress);
 
-                // Create provider and signer
-                try {
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
-                    console.log('Provider created');
-                } catch (providerError) {
-                    console.error('Provider error:', providerError);
-                    showMessage('Failed to create provider 😞', 'lose');
-                    isProcessing = false;
-                    return;
-                }
+                provider = new ethers.providers.Web3Provider(window.ethereum);
+                signer = provider.getSigner();
 
-                // Check network
-                showMessage('Checking network... 🌐');
-                let currentChainId;
-                try {
-                    currentChainId = await window.ethereum.request({ method: 'eth_chainId' });
-                    console.log('Current chain ID:', currentChainId);
-                } catch (chainError) {
-                    console.error('Chain ID error:', chainError);
-                }
-
-                // Switch to Celo if needed
-                if (currentChainId !== CELO_MAINNET_CHAIN_ID) {
-                    showMessage('Switching to Celo network... 🔄');
+                // Vérifier/switcher vers Celo
+                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                if (chainId !== CELO_MAINNET_CHAIN_ID) {
+                    showMessage('Switching to Celo... 🔄');
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
                         });
-                        console.log('Switched to Celo');
                     } catch (switchError) {
-                        console.log('Switch error:', switchError);
-                        // If Celo is not added, add it
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            try {
-                                await window.ethereum.request({
-                                    method: 'wallet_addEthereumChain',
-                                    params: [{
-                                        chainId: CELO_MAINNET_CHAIN_ID,
-                                        chainName: 'Celo Mainnet',
-                                        nativeCurrency: {
-                                            name: 'CELO',
-                                            symbol: 'CELO',
-                                            decimals: 18
-                                        },
-                                        rpcUrls: [CELO_RPC_URL],
-                                        blockExplorerUrls: ['https://explorer.celo.org']
-                                    }]
-                                });
-                                console.log('Celo network added');
-                            } catch (addError) {
-                                console.error('Add network error:', addError);
-                                showMessage('Please add Celo network manually 😞', 'lose');
-                                isProcessing = false;
-                                return;
-                            }
+                            await window.ethereum.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: CELO_MAINNET_CHAIN_ID,
+                                    chainName: 'Celo Mainnet',
+                                    nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+                                    rpcUrls: [CELO_RPC_URL],
+                                    blockExplorerUrls: ['https://explorer.celo.org']
+                                }]
+                            });
                         } else {
-                            console.error('Network switch failed:', switchError);
-                            showMessage('Please switch to Celo network 😞', 'lose');
-                            isProcessing = false;
-                            return;
+                            throw switchError;
                         }
                     }
                 }
 
-                // Create contract instance
-                showMessage('Connecting to contract... 📝');
-                try {
-                    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                    console.log('Contract created');
-                } catch (contractError) {
-                    console.error('Contract error:', contractError);
-                    showMessage('Failed to connect to contract 😞', 'lose');
-                    isProcessing = false;
-                    return;
-                }
+                // Créer le contrat UNE SEULE FOIS
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                console.log('✅ Contract ready');
 
-                // Update UI
-                document.getElementById('walletLabel').textContent = 'Connected';
+                // Écouter les events du contrat
+                contract.on("GameEnded", (player, status, duration) => {
+                    if (player.toLowerCase() === userAddress.toLowerCase()) {
+                        console.log('🎮 Game ended event:', status.toString());
+                        setTimeout(() => {
+                            loadOnChainStats();
+                            loadLeaderboard();
+                        }, 2000);
+                    }
+                });
+
+                walletConnected = true;
+
+                document.getElementById('walletLabel').textContent = 'Connected ✓';
                 document.getElementById('walletAddress').textContent = 
                     userAddress.substring(0, 8) + '...' + userAddress.substring(36);
                 document.getElementById('walletAddress').style.display = 'block';
-                document.getElementById('connectBtn').textContent = '✓ Connected';
-                document.getElementById('connectBtn').disabled = true;
+                connectBtn.style.display = 'none';
 
-                // Load stats
-                showMessage('Loading your stats... 📊');
-                try {
-                    await loadOnChainStats();
-                    await loadLeaderboard();
-                } catch (statsError) {
-                    console.error('Stats error:', statsError);
-                    // Continue anyway
-                }
+                await loadOnChainStats();
+                await loadLeaderboard();
 
-                showMessage('Wallet connected successfully! 🎉', 'win');
-                console.log('Connection complete!');
+                showMessage('Connected! Ready to play 🎉', 'win');
 
             } catch (error) {
-                console.error('Unexpected error:', error);
-                showMessage('Connection failed: ' + error.message + ' 😞', 'lose');
+                console.error('Connection error:', error);
+                showMessage('Connection failed: ' + (error.message || 'Unknown error'), 'lose');
+                connectBtn.textContent = 'Retry';
+                connectBtn.disabled = false;
+                connectBtn.onclick = connectWalletOnce;
             } finally {
                 isProcessing = false;
             }
         }
 
-        // Start Game
+        // START GAME - Utilise la connexion existante
         async function startGame() {
             if (isProcessing) return;
             
-            if (currentMode === 'chain' && !userAddress) {
-                showMessage('Connect wallet first! 🔗', 'lose');
+            if (currentMode === 'chain' && !walletConnected) {
+                showMessage('Please wait, connecting...⏳', 'lose');
                 return;
             }
 
@@ -895,9 +806,11 @@
             
             try {
                 if (currentMode === 'chain') {
-                    showMessage('Starting on-chain... ⏳');
+                    showMessage('Starting on-chain game... ⏳');
                     const tx = await contract.startGame();
+                    showMessage('Waiting for confirmation... ⏳');
                     await tx.wait();
+                    console.log('✅ Game started on-chain');
                 }
 
                 gameActive = true;
@@ -910,13 +823,13 @@
                 showMessage('Your turn! Tap a cell 👆');
             } catch (error) {
                 console.error('Start error:', error);
-                showMessage('Failed to start 😞', 'lose');
+                showMessage('Failed to start: ' + (error.message || 'Unknown'), 'lose');
             } finally {
                 isProcessing = false;
             }
         }
 
-        // Make Move
+        // MAKE MOVE - Utilise la connexion existante
         async function makeMove(position) {
             if (!gameActive || currentTurn !== 1 || board[position] !== 0 || isProcessing) {
                 return;
@@ -926,23 +839,36 @@
             
             try {
                 if (currentMode === 'chain') {
-                    showMessage('Making move... ⏳');
+                    showMessage('Making your move... ⏳');
+                    
+                    // Une seule transaction - l'IA joue automatiquement on-chain
                     const tx = await contract.makeMove(position);
+                    showMessage('Waiting for AI response... 🤖');
                     await tx.wait();
                     
+                    // Récupérer le plateau mis à jour
                     const contractBoard = await contract.getBoard(userAddress);
                     board = contractBoard.map(n => n.toNumber());
-                    
                     updateBoardDisplay();
                     
-                    // Check game end on chain
-                    const stats = await contract.getPlayerStats(userAddress);
-                    // Game ended, refresh stats
-                    setTimeout(() => {
-                        loadOnChainStats();
-                        loadLeaderboard();
-                    }, 1000);
+                    // Vérifier si le jeu est terminé
+                    if (checkWin(1)) {
+                        showMessage('🎉 You Win!', 'win');
+                        gameActive = false;
+                        document.getElementById('startBtn').disabled = false;
+                    } else if (checkWin(2)) {
+                        showMessage('😢 AI Wins!', 'lose');
+                        gameActive = false;
+                        document.getElementById('startBtn').disabled = false;
+                    } else if (board.every(cell => cell !== 0)) {
+                        showMessage('🤝 Draw!', 'draw');
+                        gameActive = false;
+                        document.getElementById('startBtn').disabled = false;
+                    } else {
+                        showMessage('Your turn! 👆');
+                    }
                 } else {
+                    // Free play
                     board[position] = 1;
                     updateBoardDisplay();
 
@@ -965,11 +891,11 @@
                         makeAIMove();
                         isProcessing = false;
                     }, 600);
-                    return; // Don't set isProcessing to false yet
+                    return;
                 }
             } catch (error) {
                 console.error('Move error:', error);
-                showMessage('Move failed 😞', 'lose');
+                showMessage('Move failed: ' + (error.message || 'Unknown'), 'lose');
             } finally {
                 if (currentMode === 'chain') {
                     isProcessing = false;
@@ -977,7 +903,6 @@
             }
         }
 
-        // AI Move
         function makeAIMove() {
             let move = findWinningMove(2);
             if (move === -1) move = findWinningMove(1);
@@ -1017,7 +942,6 @@
             showMessage('Your turn! 👆');
         }
 
-        // Find Winning Move
         function findWinningMove(player) {
             for (let i = 0; i < 9; i++) {
                 if (board[i] === 0) {
@@ -1032,20 +956,15 @@
             return -1;
         }
 
-        // Check Win
         function checkWin(player) {
             const lines = [
                 [0, 1, 2], [3, 4, 5], [6, 7, 8],
                 [0, 3, 6], [1, 4, 7], [2, 5, 8],
                 [0, 4, 8], [2, 4, 6]
             ];
-
-            return lines.some(line => 
-                line.every(index => board[index] === player)
-            );
+            return lines.some(line => line.every(index => board[index] === player));
         }
 
-        // End Game
         function endGame(result) {
             gameActive = false;
             
@@ -1073,7 +992,6 @@
             document.getElementById('resetBtn').disabled = false;
         }
 
-        // Reset Game
         function resetGame() {
             if (isProcessing) return;
             
@@ -1086,7 +1004,6 @@
             showMessage('Click Start to begin! 🚀');
         }
 
-        // Update Board Display
         function updateBoardDisplay() {
             const cells = document.querySelectorAll('.cell');
             cells.forEach((cell, index) => {
@@ -1103,44 +1020,41 @@
             });
         }
 
-        // Show Message
         function showMessage(message, type = '') {
             const banner = document.getElementById('statusBanner');
             banner.textContent = message;
             banner.className = 'status-banner ' + type;
         }
 
-        // Load On-Chain Stats
         async function loadOnChainStats() {
             if (!contract || !userAddress) return;
 
             try {
                 const stats = await contract.getPlayerStats(userAddress);
                 
-                document.getElementById('statGames').textContent = stats.gamesPlayed.toString();
-                document.getElementById('statWins').textContent = stats.wins.toString();
-                document.getElementById('statLosses').textContent = stats.losses.toString();
-                document.getElementById('statDraws').textContent = stats.draws.toString();
+                document.getElementById('statGames').textContent = stats[0].toString();
+                document.getElementById('statWins').textContent = stats[1].toString();
+                document.getElementById('statLosses').textContent = stats[2].toString();
+                document.getElementById('statDraws').textContent = stats[3].toString();
                 document.getElementById('statWinRate').textContent = 
-                    (stats.winRate.toNumber() / 100).toFixed(1) + '%';
-                document.getElementById('statStreak').textContent = stats.currentStreak.toString();
+                    (stats[4].toNumber() / 100).toFixed(1) + '%';
+                document.getElementById('statStreak').textContent = stats[5].toString();
             } catch (error) {
                 console.error('Load stats error:', error);
             }
         }
 
-        // Load Leaderboard
         async function loadLeaderboard() {
             if (!contract) return;
 
             const content = document.getElementById('leaderboardContent');
-            content.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
 
             try {
                 const leaderboard = await contract.getLeaderboard();
 
                 if (leaderboard.length === 0) {
-                    content.innerHTML = '<div class="empty">No players yet! 🎮<br>Be the first to play!</div>';
+                    content.innerHTML = '<div class="loading">No players yet! 🎮<br>Be the first!</div>';
                     return;
                 }
 
@@ -1168,11 +1082,10 @@
                 content.innerHTML = html;
             } catch (error) {
                 console.error('Load leaderboard error:', error);
-                content.innerHTML = '<div class="error">Failed to load 😞</div>';
+                content.innerHTML = '<div class="loading">Failed to load 😞</div>';
             }
         }
 
-        // Local Storage
         function loadLocalStats() {
             const saved = localStorage.getItem('tictactoe_stats');
             if (saved) {
@@ -1199,20 +1112,24 @@
             }
         }
 
-        // Event Listeners
+        // Event listeners
         window.addEventListener('load', init);
 
-        // Handle account/network changes
         if (window.ethereum) {
             window.ethereum.on('accountsChanged', (accounts) => {
                 if (accounts.length === 0) {
+                    walletConnected = false;
                     userAddress = null;
-                    document.getElementById('walletLabel').textContent = 'Wallet Status';
+                    provider = null;
+                    signer = null;
+                    contract = null;
+                    document.getElementById('walletLabel').textContent = 'Not connected';
                     document.getElementById('walletAddress').style.display = 'none';
-                    document.getElementById('connectBtn').textContent = 'Connect';
+                    document.getElementById('connectBtn').style.display = 'block';
                     document.getElementById('connectBtn').disabled = false;
+                    document.getElementById('connectBtn').textContent = 'Connect';
                     resetGame();
-                } else {
+                } else if (accounts[0] !== userAddress) {
                     location.reload();
                 }
             });
