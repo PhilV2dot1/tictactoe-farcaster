@@ -612,9 +612,11 @@
         const CONTRACT_ABI = [
             "function startGame() external",
             "function makeMove(uint8 position) external",
+            "function forfeitGame() external",
             "function getBoard(address player) external view returns (uint8[9])",
             "function getPlayerStats(address player) external view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
             "function getLeaderboard() external view returns (tuple(address player, uint256 wins, uint256 winRate, uint256 bestStreak, uint256 fastestWin)[])",
+            "function activeGames(address) external view returns (address player, uint8[9] board, uint8 currentTurn, uint8 status, uint256 startTime, uint256 endTime, uint8 moveCount)",
             "event GameStarted(address indexed player, uint256 timestamp)",
             "event MoveMade(address indexed player, uint8 position, uint8 playerType)",
             "event GameEnded(address indexed player, uint8 status, uint256 duration)"
@@ -806,6 +808,26 @@
             
             try {
                 if (currentMode === 'chain') {
+                    // Vérifier s'il y a déjà une partie active
+                    try {
+                        const activeGame = await contract.activeGames(userAddress);
+                        if (activeGame.status === 0) { // GameStatus.Active = 0
+                            showMessage('You have an active game! Click Reset first 🔄', 'lose');
+                            isProcessing = false;
+                            
+                            // Charger le plateau existant
+                            const contractBoard = await contract.getBoard(userAddress);
+                            board = contractBoard.map(n => n.toNumber());
+                            updateBoardDisplay();
+                            gameActive = true;
+                            document.getElementById('startBtn').disabled = true;
+                            document.getElementById('resetBtn').disabled = false;
+                            return;
+                        }
+                    } catch (checkError) {
+                        console.log('No active game found, starting new one');
+                    }
+                    
                     showMessage('Starting on-chain game... ⏳');
                     const tx = await contract.startGame();
                     showMessage('Waiting for confirmation... ⏳');
@@ -823,7 +845,8 @@
                 showMessage('Your turn! Tap a cell 👆');
             } catch (error) {
                 console.error('Start error:', error);
-                showMessage('Failed to start: ' + (error.message || 'Unknown'), 'lose');
+                const errorMsg = error.reason || error.message || 'Unknown error';
+                showMessage('Failed to start: ' + errorMsg + ' 😞', 'lose');
             } finally {
                 isProcessing = false;
             }
@@ -995,6 +1018,14 @@
         function resetGame() {
             if (isProcessing) return;
             
+            // Si on-chain et partie active, proposer d'abandonner
+            if (currentMode === 'chain' && gameActive && walletConnected) {
+                if (confirm('Abandon this on-chain game? This will count as a loss.')) {
+                    forfeitOnChainGame();
+                }
+                return;
+            }
+            
             gameActive = false;
             board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
             currentTurn = 1;
@@ -1002,6 +1033,34 @@
             document.getElementById('startBtn').disabled = false;
             document.getElementById('resetBtn').disabled = true;
             showMessage('Click Start to begin! 🚀');
+        }
+
+        async function forfeitOnChainGame() {
+            if (isProcessing) return;
+            isProcessing = true;
+
+            try {
+                showMessage('Abandoning game... 🏳️');
+                const tx = await contract.forfeitGame();
+                await tx.wait();
+                
+                gameActive = false;
+                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                updateBoardDisplay();
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('resetBtn').disabled = true;
+                
+                showMessage('Game abandoned. Ready for a new game! 🆕');
+                
+                // Rafraîchir les stats
+                await loadOnChainStats();
+                await loadLeaderboard();
+            } catch (error) {
+                console.error('Forfeit error:', error);
+                showMessage('Failed to abandon: ' + (error.message || 'Unknown'), 'lose');
+            } finally {
+                isProcessing = false;
+            }
         }
 
         function updateBoardDisplay() {
