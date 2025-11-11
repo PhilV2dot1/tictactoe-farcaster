@@ -1,60 +1,26 @@
 {
   "version": 2,
-  "builds": [
+  "rewrites": [
     {
-      "src": "api/**/*.js",
-      "use": "@vercel/node"
+      "source": "/.well-known/farcaster.json",
+      "destination": "/public/.well-known/farcaster.json"
     },
     {
-      "src": "public/**",
-      "use": "@vercel/static"
-    }
-  ],
-  "routes": [
-    {
-      "src": "/.well-known/farcaster.json",
-      "dest": "/api/manifest.js"
-    },
-    {
-      "src": "/manifest.json",
-      "dest": "/api/manifest.js"
-    },
-    {
-      "src": "/api/frame",
-      "dest": "/api/frame.js"
-    },
-    {
-      "src": "/frame-preview.png",
-      "dest": "/public/frame-preview.png"
-    },
-    {
-      "src": "/icon.png",
-      "dest": "/public/icon.png"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/public/$1"
+      "source": "/manifest.json",
+      "destination": "/public/manifest.json"
     }
   ],
   "headers": [
     {
-      "source": "/.well-known/(.*)",
+      "source": "/.well-known/farcaster.json",
       "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, OPTIONS"
-        },
         {
           "key": "Content-Type",
           "value": "application/json"
         },
         {
-          "key": "Cache-Control",
-          "value": "public, max-age=300"
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
         }
       ]
     },
@@ -68,23 +34,6 @@
         {
           "key": "Access-Control-Allow-Origin",
           "value": "*"
-        },
-        {
-          "key": "Cache-Control",
-          "value": "public, max-age=300"
-        }
-      ]
-    },
-    {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, OPTIONS"
         }
       ]
     }
