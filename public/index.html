@@ -9,8 +9,27 @@
     <link rel="preconnect" href="https://cdn.jsdelivr.net">
     <link rel="dns-prefetch" href="https://forno.celo.org">
     
-    <!-- Scripts avec defer pour ne pas bloquer le rendu -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script type="module">
+        // Import et init Farcaster SDK
+        import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.1';
+        
+        // Rendre sdk global
+        window.farcasterSDK = sdk;
+        
+        // Appeler ready() immédiatement
+        sdk.actions.ready();
+        console.log('✅ Farcaster SDK ready called');
+        
+        // Récupérer le context
+        sdk.context.then(context => {
+            console.log('Farcaster context:', context);
+            window.farcasterContext = context;
+        }).catch(err => {
+            console.log('Not in Farcaster frame:', err);
+        });
+    </script>
     
     <style>
         * {
@@ -696,43 +715,63 @@
             connectBtn.disabled = true;
             
             try {
-                if (!window.ethereum) {
-                    showMessage('Please install MetaMask or use Farcaster! 🦊', 'lose');
-                    connectBtn.textContent = 'No Wallet';
-                    return;
-                }
-
                 showMessage('Connecting wallet... 🔗');
                 connectBtn.textContent = 'Connecting...';
+                
+                let accounts = [];
+                let walletProvider = null;
 
-                const accounts = await window.ethereum.request({
-                    method: 'eth_requestAccounts'
-                });
+                // Priority 1: Farcaster SDK Wallet
+                if (window.farcasterSDK && window.farcasterContext) {
+                    try {
+                        console.log('Attempting Farcaster SDK wallet...');
+                        const wallet = await window.farcasterSDK.wallet.ethProvider;
+                        
+                        if (wallet) {
+                            accounts = await wallet.request({
+                                method: 'eth_requestAccounts'
+                            });
+                            walletProvider = wallet;
+                            console.log('✅ Using Farcaster wallet');
+                        }
+                    } catch (farcasterError) {
+                        console.log('Farcaster wallet not available:', farcasterError);
+                    }
+                }
 
-                if (!accounts || accounts.length === 0) {
-                    throw new Error('No accounts found');
+                // Priority 2: window.ethereum (MetaMask, etc.)
+                if (!walletProvider && window.ethereum) {
+                    accounts = await window.ethereum.request({
+                        method: 'eth_requestAccounts'
+                    });
+                    walletProvider = window.ethereum;
+                    console.log('✅ Using browser wallet');
+                }
+
+                if (!walletProvider || !accounts || accounts.length === 0) {
+                    throw new Error('No wallet found or no accounts');
                 }
 
                 userAddress = accounts[0];
                 console.log('✅ Connected:', userAddress);
 
-                provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider = new ethers.providers.Web3Provider(walletProvider);
                 signer = provider.getSigner();
 
                 // Vérifier/switcher vers Celo
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
+                const chainId = await walletProvider.request({ method: 'eth_chainId' });
                 console.log('Current chain:', chainId);
                 
                 if (chainId !== CELO_MAINNET_CHAIN_ID) {
                     showMessage('Switching to Celo... 🔄');
                     try {
-                        await window.ethereum.request({
+                        await walletProvider.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
                         });
                     } catch (switchError) {
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            await window.ethereum.request({
+                            await walletProvider.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [{
                                     chainId: CELO_MAINNET_CHAIN_ID,
@@ -758,10 +797,9 @@
                     const gameStatus = parseInt(activeGameData.status.toString());
                     console.log('Active game status:', gameStatus);
                     
-                    if (gameStatus === 0) { // GameStatus.Active
-                        showMessage('⚠️ You have an active game! Click Reset to abandon it', 'lose');
+                    if (gameStatus === 0) {
+                        showMessage('⚠️ Active game detected. Start will auto-reset.', 'lose');
                         
-                        // Charger le plateau existant
                         const contractBoard = await contract.getBoard(userAddress);
                         board = contractBoard.map(cell => {
                             if (typeof cell === 'number') return cell;

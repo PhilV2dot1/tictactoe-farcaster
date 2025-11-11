@@ -13,19 +13,11 @@
   "routes": [
     {
       "src": "/.well-known/farcaster.json",
-      "dest": "/public/.well-known/farcaster.json",
-      "headers": {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      }
+      "dest": "/api/manifest.js"
     },
     {
       "src": "/manifest.json",
-      "dest": "/public/manifest.json",
-      "headers": {
-        "Content-Type": "application/json",
-        "Access-Control-Allow-Origin": "*"
-      }
+      "dest": "/api/manifest.js"
     },
     {
       "src": "/api/frame",
