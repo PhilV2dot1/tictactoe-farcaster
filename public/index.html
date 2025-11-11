@@ -814,7 +814,7 @@
             }
         }
 
-        // START GAME - Utilise la connexion existante
+        // START GAME - Gère automatiquement les parties actives
         async function startGame() {
             if (isProcessing) return;
             
@@ -827,11 +827,36 @@
             
             try {
                 if (currentMode === 'chain') {
-                    showMessage('Starting on-chain game... ⏳');
+                    // SOLUTION PERMANENTE : Vérifier et abandonner automatiquement
+                    try {
+                        const activeGameData = await contract.activeGames(userAddress);
+                        const gameStatus = parseInt(activeGameData.status.toString());
+                        
+                        if (gameStatus === 0) {
+                            // Partie active détectée - Abandonner automatiquement
+                            showMessage('Found active game, resetting... 🔄');
+                            console.log('🏳️ Auto-forfeiting active game...');
+                            
+                            const forfeitTx = await contract.forfeitGame({
+                                gasLimit: 300000
+                            });
+                            
+                            showMessage('Abandoning previous game... ⏳');
+                            await forfeitTx.wait();
+                            console.log('✅ Active game forfeited');
+                            
+                            // Petite pause pour que le contrat se mette à jour
+                            await new Promise(resolve => setTimeout(resolve, 1000));
+                        }
+                    } catch (checkError) {
+                        console.log('No active game or already ended:', checkError.message);
+                    }
                     
-                    // Appel direct sans vérification pour éviter l'erreur gas
+                    // Maintenant démarrer la nouvelle partie
+                    showMessage('Starting new game... ⏳');
+                    
                     const tx = await contract.startGame({
-                        gasLimit: 500000 // Gas limit manuel
+                        gasLimit: 500000
                     });
                     
                     showMessage('Waiting for confirmation... ⏳');
@@ -847,20 +872,30 @@
                 document.getElementById('startBtn').disabled = true;
                 document.getElementById('resetBtn').disabled = false;
                 showMessage('Your turn! Tap a cell 👆');
+                
+                // Recharger les stats
+                if (currentMode === 'chain') {
+                    setTimeout(() => {
+                        loadOnChainStats();
+                        loadLeaderboard();
+                    }, 2000);
+                }
             } catch (error) {
                 console.error('Start error:', error);
                 
-                // Message d'erreur plus clair
-                if (error.message && error.message.includes('Partie deja en cours')) {
-                    showMessage('⚠️ Active game found! Click Reset to abandon it', 'lose');
-                    
-                    // Activer le bouton Reset
-                    document.getElementById('resetBtn').disabled = false;
-                    gameActive = true;
-                } else {
-                    const errorMsg = error.reason || error.message || 'Unknown error';
-                    showMessage('Failed: ' + errorMsg.substring(0, 50) + ' 😞', 'lose');
+                // Message d'erreur personnalisé
+                let errorMsg = 'Failed to start game';
+                if (error.message) {
+                    if (error.message.includes('user rejected')) {
+                        errorMsg = 'Transaction cancelled';
+                    } else if (error.message.includes('insufficient funds')) {
+                        errorMsg = 'Insufficient CELO for gas';
+                    } else {
+                        errorMsg = error.message.substring(0, 60);
+                    }
                 }
+                
+                showMessage(errorMsg + ' 😞', 'lose');
             } finally {
                 isProcessing = false;
             }
@@ -1036,21 +1071,31 @@
         function resetGame() {
             if (isProcessing) return;
             
-            // Si on-chain et partie active, proposer d'abandonner
-            if (currentMode === 'chain' && gameActive && walletConnected) {
-                if (confirm('Abandon this on-chain game? This will count as a loss.')) {
-                    forfeitOnChainGame();
-                }
+            // Mode free play - reset simple
+            if (currentMode === 'free' || !walletConnected) {
+                gameActive = false;
+                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                currentTurn = 1;
+                updateBoardDisplay();
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('resetBtn').disabled = true;
+                showMessage('Click Start to begin! 🚀');
                 return;
             }
             
-            gameActive = false;
-            board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-            currentTurn = 1;
-            updateBoardDisplay();
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('resetBtn').disabled = true;
-            showMessage('Click Start to begin! 🚀');
+            // Mode on-chain - proposer d'abandonner si partie active
+            if (gameActive) {
+                if (confirm('⚠️ Abandon this game? This will count as a loss and cost gas.')) {
+                    forfeitOnChainGame();
+                }
+            } else {
+                // Pas de partie active, reset simple
+                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                updateBoardDisplay();
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('resetBtn').disabled = true;
+                showMessage('Click Start to begin! 🚀');
+            }
         }
 
         async function forfeitOnChainGame() {
@@ -1059,7 +1104,11 @@
 
             try {
                 showMessage('Abandoning game... 🏳️');
-                const tx = await contract.forfeitGame();
+                const tx = await contract.forfeitGame({
+                    gasLimit: 300000
+                });
+                
+                showMessage('Waiting for confirmation... ⏳');
                 await tx.wait();
                 
                 gameActive = false;
@@ -1068,14 +1117,28 @@
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('resetBtn').disabled = true;
                 
-                showMessage('Game abandoned. Ready for a new game! 🆕');
+                showMessage('Game abandoned. Ready for new game! 🆕');
                 
                 // Rafraîchir les stats
                 await loadOnChainStats();
                 await loadLeaderboard();
             } catch (error) {
                 console.error('Forfeit error:', error);
-                showMessage('Failed to abandon: ' + (error.message || 'Unknown'), 'lose');
+                
+                let errorMsg = 'Failed to abandon';
+                if (error.message && error.message.includes('user rejected')) {
+                    errorMsg = 'Cancelled';
+                } else if (error.message && error.message.includes('Aucune partie active')) {
+                    errorMsg = 'No active game to abandon';
+                    // Reset local anyway
+                    gameActive = false;
+                    board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
+                    updateBoardDisplay();
+                    document.getElementById('startBtn').disabled = false;
+                    document.getElementById('resetBtn').disabled = true;
+                }
+                
+                showMessage(errorMsg + ' 😞', 'lose');
             } finally {
                 isProcessing = false;
             }
