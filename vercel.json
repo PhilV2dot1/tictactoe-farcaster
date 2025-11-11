@@ -13,15 +13,31 @@
   "routes": [
     {
       "src": "/.well-known/farcaster.json",
-      "dest": "/public/.well-known/farcaster.json"
+      "dest": "/public/.well-known/farcaster.json",
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
+    },
+    {
+      "src": "/manifest.json",
+      "dest": "/public/manifest.json",
+      "headers": {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      }
     },
     {
       "src": "/api/frame",
       "dest": "/api/frame.js"
     },
     {
-      "src": "/manifest.json",
-      "dest": "/public/manifest.json"
+      "src": "/frame-preview.png",
+      "dest": "/public/frame-preview.png"
+    },
+    {
+      "src": "/icon.png",
+      "dest": "/public/icon.png"
     },
     {
       "src": "/(.*)",
@@ -37,8 +53,33 @@
           "value": "*"
         },
         {
+          "key": "Access-Control-Allow-Methods",
+          "value": "GET, OPTIONS"
+        },
+        {
           "key": "Content-Type",
           "value": "application/json"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
+        }
+      ]
+    },
+    {
+      "source": "/manifest.json",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/json"
+        },
+        {
+          "key": "Access-Control-Allow-Origin",
+          "value": "*"
+        },
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=300"
         }
       ]
     },
@@ -51,7 +92,7 @@
         },
         {
           "key": "Access-Control-Allow-Methods",
-          "value": "GET,OPTIONS,PATCH,DELETE,POST,PUT"
+          "value": "GET, POST, OPTIONS"
         }
       ]
     }
