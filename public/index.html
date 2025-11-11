@@ -611,8 +611,21 @@
     </div>
 
     <script>
-        // Pas d'init Farcaster SDK pour éviter l'erreur export
-        // Le SDK sera chargé si disponible mais pas obligatoire
+        // Farcaster SDK Init (inline, pas module)
+        (function() {
+            // Charger le SDK via script dynamique
+            const script = document.createElement('script');
+            script.src = 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
+            script.type = 'module';
+            script.onload = function() {
+                console.log('✅ Farcaster SDK script loaded');
+            };
+            document.head.appendChild(script);
+            
+            // Détecter si on est dans Farcaster
+            window.isFarcasterFrame = window.parent !== window;
+            console.log('In Farcaster Frame:', window.isFarcasterFrame);
+        })();
 
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         const CELO_MAINNET_CHAIN_ID = "0xa4ec";
@@ -705,7 +718,7 @@
             resetGame();
         }
 
-        // CONNEXION UNE SEULE FOIS
+        // CONNEXION UNE SEULE FOIS - Priorité Farcaster
         async function connectWalletOnce() {
             if (walletConnected || isProcessing) return;
             isProcessing = true;
@@ -720,40 +733,47 @@
                 
                 let accounts = [];
                 let walletProvider = null;
+                let walletName = 'Unknown';
 
-                // Priority 1: Farcaster SDK Wallet
-                if (window.farcasterSDK && window.farcasterContext) {
+                // PRIORITÉ 1: Farcaster (détection simple)
+                if (window.isFarcasterFrame && window.ethereum) {
+                    console.log('🟣 Attempting Farcaster wallet...');
                     try {
-                        console.log('Attempting Farcaster SDK wallet...');
-                        const wallet = await window.farcasterSDK.wallet.ethProvider;
+                        accounts = await window.ethereum.request({
+                            method: 'eth_requestAccounts'
+                        });
                         
-                        if (wallet) {
-                            accounts = await wallet.request({
-                                method: 'eth_requestAccounts'
-                            });
-                            walletProvider = wallet;
+                        if (accounts && accounts.length > 0) {
+                            walletProvider = window.ethereum;
+                            walletName = 'Farcaster';
                             console.log('✅ Using Farcaster wallet');
                         }
                     } catch (farcasterError) {
-                        console.log('Farcaster wallet not available:', farcasterError);
+                        console.log('Farcaster wallet error:', farcasterError);
                     }
                 }
 
-                // Priority 2: window.ethereum (MetaMask, etc.)
+                // PRIORITÉ 2: window.ethereum (fallback)
                 if (!walletProvider && window.ethereum) {
-                    accounts = await window.ethereum.request({
-                        method: 'eth_requestAccounts'
-                    });
-                    walletProvider = window.ethereum;
-                    console.log('✅ Using browser wallet');
+                    console.log('Attempting browser wallet...');
+                    try {
+                        accounts = await window.ethereum.request({
+                            method: 'eth_requestAccounts'
+                        });
+                        walletProvider = window.ethereum;
+                        walletName = 'Browser Wallet';
+                        console.log('✅ Using browser wallet');
+                    } catch (ethError) {
+                        console.log('Browser wallet error:', ethError);
+                    }
                 }
 
                 if (!walletProvider || !accounts || accounts.length === 0) {
-                    throw new Error('No wallet found or no accounts');
+                    throw new Error('No wallet found. Please use Farcaster app or install MetaMask.');
                 }
 
                 userAddress = accounts[0];
-                console.log('✅ Connected:', userAddress);
+                console.log('✅ Connected:', userAddress, 'via', walletName);
 
                 provider = new ethers.providers.Web3Provider(walletProvider);
                 signer = provider.getSigner();
@@ -769,6 +789,7 @@
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: CELO_MAINNET_CHAIN_ID }]
                         });
+                        console.log('✅ Switched to Celo');
                     } catch (switchError) {
                         if (switchError.code === 4902 || switchError.code === -32603) {
                             await walletProvider.request({
@@ -781,17 +802,18 @@
                                     blockExplorerUrls: ['https://explorer.celo.org']
                                 }]
                             });
+                            console.log('✅ Celo network added');
                         } else {
                             throw switchError;
                         }
                     }
                 }
 
-                // Créer le contrat UNE SEULE FOIS
+                // Créer le contrat
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 console.log('✅ Contract ready');
 
-                // Vérifier s'il y a une partie active
+                // Vérifier partie active
                 try {
                     const activeGameData = await contract.activeGames(userAddress);
                     const gameStatus = parseInt(activeGameData.status.toString());
@@ -812,10 +834,10 @@
                         document.getElementById('resetBtn').disabled = false;
                     }
                 } catch (gameCheckError) {
-                    console.log('No active game or error checking:', gameCheckError);
+                    console.log('No active game:', gameCheckError.message);
                 }
 
-                // Écouter les events du contrat
+                // Écouter les events
                 contract.on("GameEnded", (player, status, duration) => {
                     if (player.toLowerCase() === userAddress.toLowerCase()) {
                         console.log('🎮 Game ended event:', status.toString());
@@ -828,7 +850,7 @@
 
                 walletConnected = true;
 
-                document.getElementById('walletLabel').textContent = 'Connected ✓';
+                document.getElementById('walletLabel').textContent = walletName + ' ✓';
                 document.getElementById('walletAddress').textContent = 
                     userAddress.substring(0, 8) + '...' + userAddress.substring(36);
                 document.getElementById('walletAddress').style.display = 'block';
@@ -838,12 +860,24 @@
                 await loadLeaderboard();
 
                 if (!gameActive) {
-                    showMessage('Connected! Click Start Game 🎉', 'win');
+                    showMessage('Connected with ' + walletName + '! 🎉', 'win');
                 }
 
             } catch (error) {
                 console.error('Connection error:', error);
-                showMessage('Connection failed: ' + (error.message || 'Unknown error'), 'lose');
+                let errorMsg = 'Connection failed';
+                
+                if (error.message) {
+                    if (error.message.includes('user rejected')) {
+                        errorMsg = 'Connection rejected';
+                    } else if (error.message.includes('No wallet')) {
+                        errorMsg = 'No wallet found. Use Farcaster app!';
+                    } else {
+                        errorMsg = error.message.substring(0, 50);
+                    }
+                }
+                
+                showMessage(errorMsg + ' 😞', 'lose');
                 connectBtn.textContent = 'Retry';
                 connectBtn.disabled = false;
                 connectBtn.onclick = connectWalletOnce;
