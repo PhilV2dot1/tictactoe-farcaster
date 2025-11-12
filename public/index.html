@@ -11,6 +11,22 @@
     
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    
+    <!-- Farcaster Frame SDK -->
+    <script type="module">
+      import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
+      window.sdk = sdk;
+      
+      // Call ready immediately
+      sdk.actions.ready();
+      console.log('✅ Frame SDK ready');
+      
+      // Get context
+      sdk.context.then(ctx => {
+        window.farcasterContext = ctx;
+        console.log('Farcaster context:', ctx);
+      }).catch(e => console.log('Not in frame:', e));
+    </script>
     <script type="module">
         // Import et init Farcaster SDK
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.1';
