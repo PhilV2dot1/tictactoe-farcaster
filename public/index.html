@@ -949,39 +949,98 @@
             }
 
             isProcessing = true;
+            const startBtn = document.getElementById('startBtn');
+            const originalText = startBtn.textContent;
             
             try {
                 if (currentMode === 'chain') {
-                    // Auto-forfeit si partie active
+                    // Vérifier qu'on est bien sur Celo
+                    const network = await provider.getNetwork();
+                    const currentChainId = '0x' + network.chainId.toString(16);
+                    
+                    if (currentChainId !== CELO_MAINNET_CHAIN_ID) {
+                        throw new Error('Wrong network! Please switch to Celo Mainnet in your wallet.');
+                    }
+                    
+                    // Vérifier la balance avant toute transaction
+                    const balance = await provider.getBalance(userAddress);
+                    const celoBalance = parseFloat(ethers.utils.formatEther(balance));
+                    console.log('💰 Current balance:', celoBalance, 'CELO');
+                    
+                    if (celoBalance < 0.01) {
+                        throw new Error('Insufficient CELO. You need at least 0.01 CELO for gas. Get free CELO from faucet.celo.org');
+                    }
+                    
+                    // Estimer le gas nécessaire d'abord
+                    console.log('⚡ Estimating gas...');
+                    let gasEstimate;
+                    
                     try {
+                        // Vérifier partie active
                         const activeGameData = await contract.activeGames(userAddress);
                         const gameStatus = parseInt(activeGameData.status.toString());
                         
                         if (gameStatus === 0) {
-                            console.log('🏳️ Forfeiting active game...');
-                            showMessage('Resetting active game... 🔄');
+                            console.log('🏳️ Active game found, will forfeit first...');
+                            showMessage('Found active game, resetting... 🔄');
                             
-                            const forfeitTx = await contract.forfeitGame({
-                                gasLimit: 300000
-                            });
-                            
-                            await forfeitTx.wait();
-                            console.log('✅ Previous game forfeited');
-                            await new Promise(resolve => setTimeout(resolve, 1500));
+                            // Estimer gas pour forfeit
+                            try {
+                                const forfeitGasEstimate = await contract.estimateGas.forfeitGame();
+                                console.log('Gas estimate for forfeit:', forfeitGasEstimate.toString());
+                                
+                                const forfeitTx = await contract.forfeitGame({
+                                    gasLimit: forfeitGasEstimate.mul(120).div(100) // +20% safety
+                                });
+                                
+                                startBtn.textContent = 'Forfeiting...';
+                                await forfeitTx.wait();
+                                console.log('✅ Previous game forfeited');
+                                
+                                // Pause pour que le contrat se mette à jour
+                                await new Promise(resolve => setTimeout(resolve, 2000));
+                            } catch (forfeitError) {
+                                console.error('Forfeit error:', forfeitError);
+                                // Continue quand même si le forfeit échoue (peut-être déjà terminé)
+                            }
                         }
-                    } catch (checkError) {
-                        console.log('No active game to forfeit');
+                        
+                        // Estimer gas pour startGame
+                        gasEstimate = await contract.estimateGas.startGame();
+                        console.log('✅ Gas estimate for startGame:', gasEstimate.toString());
+                        
+                    } catch (estimateError) {
+                        console.error('❌ Gas estimation failed:', estimateError);
+                        
+                        // Utiliser des valeurs par défaut si l'estimation échoue
+                        gasEstimate = ethers.BigNumber.from('500000');
+                        console.log('⚠️ Using default gas limit:', gasEstimate.toString());
                     }
                     
                     showMessage('Starting new game... ⏳');
+                    startBtn.textContent = 'Starting...';
+                    
+                    // Ajouter 20% de marge de sécurité au gas
+                    const gasLimit = gasEstimate.mul(120).div(100);
+                    console.log('🔧 Using gas limit:', gasLimit.toString());
+                    
+                    // Obtenir le gas price actuel
+                    const gasPrice = await provider.getGasPrice();
+                    console.log('💵 Gas price:', ethers.utils.formatUnits(gasPrice, 'gwei'), 'Gwei');
                     
                     const tx = await contract.startGame({
-                        gasLimit: 500000
+                        gasLimit: gasLimit,
+                        gasPrice: gasPrice
                     });
                     
-                    showMessage('Waiting for confirmation... ⏳');
+                    console.log('📤 Transaction sent:', tx.hash);
+                    showMessage('Confirming transaction... ⏳');
+                    startBtn.textContent = 'Confirming...';
+                    
                     const receipt = await tx.wait();
-                    console.log('✅ Game started:', receipt.transactionHash);
+                    console.log('✅ Transaction confirmed!');
+                    console.log('Block:', receipt.blockNumber);
+                    console.log('Gas used:', receipt.gasUsed.toString());
                 }
 
                 gameActive = true;
@@ -1003,21 +1062,32 @@
                 console.error('❌ Start game error:', error);
                 
                 let errorMsg = 'Failed to start game';
+                
                 if (error.message) {
-                    if (error.message.includes('user rejected')) {
-                        errorMsg = 'Transaction cancelled';
+                    if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
+                        errorMsg = 'Transaction cancelled by user';
                     } else if (error.message.includes('insufficient funds')) {
                         errorMsg = 'Insufficient CELO for gas';
+                    } else if (error.message.includes('Wrong network')) {
+                        errorMsg = error.message;
+                    } else if (error.message.includes('Insufficient CELO')) {
+                        errorMsg = error.message;
                     } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-                        errorMsg = 'Contract error. Try Reset first.';
+                        errorMsg = 'Contract error. Make sure you\'re on Celo network.';
+                    } else if (error.code === -32603) {
+                        errorMsg = 'RPC error. Please try again.';
+                    } else if (error.message.includes('nonce')) {
+                        errorMsg = 'Nonce error. Please refresh the page.';
                     } else {
-                        errorMsg = error.message.substring(0, 60);
+                        errorMsg = error.message.substring(0, 80);
                     }
                 }
                 
                 showMessage(errorMsg + ' 😞', 'lose');
+                startBtn.textContent = originalText;
             } finally {
                 isProcessing = false;
+                startBtn.textContent = originalText;
             }
         }
 
