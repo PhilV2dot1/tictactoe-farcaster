@@ -504,11 +504,11 @@
         <div class="wallet-card" id="walletCard">
             <div class="wallet-status">
                 <div class="wallet-info">
-                    <div class="wallet-label" id="walletLabel">Not connected</div>
+                    <div class="wallet-label" id="walletLabel">Connecting...</div>
                     <div class="wallet-address" id="walletAddress" style="display:none;"></div>
                 </div>
-                <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
-                    Connect
+                <button class="btn btn-primary" id="connectBtn" style="display:none;">
+                    Retry
                 </button>
             </div>
         </div>
@@ -590,25 +590,32 @@
     </div>
 
     <script type="module">
+        // Charger et initialiser le SDK Farcaster
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
+        
         window.farcasterSDK = sdk;
+        window.farcasterReady = false;
         
         try {
             await sdk.actions.ready();
             console.log('✅ Farcaster SDK ready');
+            window.farcasterReady = true;
             
             const context = await sdk.context;
             window.farcasterContext = context;
             console.log('📱 Farcaster context:', context);
+            
+            // Signaler au code principal que le SDK est prêt
+            window.dispatchEvent(new Event('farcaster-ready'));
         } catch (e) {
-            console.log('ℹ️ Not in Farcaster frame');
+            console.log('ℹ️ Not in Farcaster frame:', e);
+            window.farcasterReady = false;
         }
     </script>
 
     <script>
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         const CELO_MAINNET_CHAIN_ID = "0xa4ec";
-        const CELO_ALFAJORES_CHAIN_ID = "0xaef3";
         const CELO_RPC_URL = "https://forno.celo.org";
 
         const CONTRACT_ABI = [
@@ -676,7 +683,10 @@
                 walletCard.classList.add('active');
                 leaderboard.style.display = 'block';
                 
-                if (walletConnected) {
+                // Auto-connect au switch
+                if (!walletConnected) {
+                    await connectWallet();
+                } else {
                     await loadOnChainStats();
                     await loadLeaderboard();
                 }
@@ -694,48 +704,82 @@
             isProcessing = true;
             
             const connectBtn = document.getElementById('connectBtn');
-            connectBtn.disabled = true;
-            connectBtn.textContent = 'Connecting...';
+            const walletLabel = document.getElementById('walletLabel');
             
             try {
+                walletLabel.textContent = 'Connecting...';
                 showMessage('Connecting wallet... 🔗');
                 
                 let walletProvider = null;
                 let accounts = [];
                 let walletName = 'Unknown';
+                let usedFarcaster = false;
 
-                // PRIORITÉ 1: Farcaster SDK Wallet
-                if (window.farcasterSDK && window.farcasterContext) {
-                    console.log('🟣 Trying Farcaster SDK wallet...');
-                    try {
-                        const ethProvider = await window.farcasterSDK.wallet.ethProvider;
-                        if (ethProvider) {
+                // BLOQUER MetaMask si on est dans Farcaster
+                const isInFarcasterFrame = window.parent !== window || window.location !== window.parent.location;
+                
+                console.log('🔍 Environment check:');
+                console.log('- In frame:', isInFarcasterFrame);
+                console.log('- SDK ready:', window.farcasterReady);
+                console.log('- Has context:', !!window.farcasterContext);
+
+                // PRIORITÉ ABSOLUE : Farcaster Wallet dans Farcaster
+                if (isInFarcasterFrame) {
+                    console.log('🟣 FARCASTER DETECTED - Blocking other wallets');
+                    
+                    // Attendre que le SDK soit prêt
+                    if (!window.farcasterReady) {
+                        console.log('⏳ Waiting for SDK...');
+                        await new Promise((resolve) => {
+                            if (window.farcasterReady) {
+                                resolve();
+                            } else {
+                                window.addEventListener('farcaster-ready', resolve, { once: true });
+                                setTimeout(resolve, 3000); // Timeout de 3s
+                            }
+                        });
+                    }
+
+                    if (window.farcasterSDK) {
+                        try {
+                            console.log('🟣 Getting Farcaster wallet provider...');
+                            const ethProvider = await window.farcasterSDK.wallet.ethProvider;
+                            
+                            if (!ethProvider) {
+                                throw new Error('Farcaster wallet provider not available');
+                            }
+
+                            console.log('🟣 Requesting Farcaster accounts...');
                             accounts = await ethProvider.request({
                                 method: 'eth_requestAccounts'
                             });
                             
                             if (accounts && accounts.length > 0) {
                                 walletProvider = ethProvider;
-                                walletName = 'Farcaster Wallet';
-                                console.log('✅ Farcaster SDK wallet connected');
+                                walletName = '🟣 Farcaster Wallet';
+                                usedFarcaster = true;
+                                console.log('✅ FARCASTER WALLET CONNECTED:', accounts[0]);
+                            } else {
+                                throw new Error('No accounts returned from Farcaster wallet');
                             }
+                        } catch (farcasterError) {
+                            console.error('❌ Farcaster wallet error:', farcasterError);
+                            throw new Error('Farcaster wallet connection failed. Please try again or contact support.');
                         }
-                    } catch (farcasterError) {
-                        console.log('Farcaster SDK wallet not available:', farcasterError.message);
+                    } else {
+                        throw new Error('Farcaster SDK not loaded. Please refresh the page.');
                     }
-                }
-
-                // PRIORITÉ 2: window.ethereum (MetaMask, Coinbase Wallet, etc.)
-                if (!walletProvider && window.ethereum) {
-                    console.log('🦊 Trying window.ethereum...');
-                    try {
-                        // Détecter le type de wallet
+                } else {
+                    // EN DEHORS de Farcaster : utiliser window.ethereum
+                    console.log('🌐 Browser mode - using window.ethereum');
+                    
+                    if (window.ethereum) {
                         if (window.ethereum.isMetaMask) {
-                            walletName = 'MetaMask';
+                            walletName = '🦊 MetaMask';
                         } else if (window.ethereum.isCoinbaseWallet) {
-                            walletName = 'Coinbase Wallet';
+                            walletName = '💼 Coinbase Wallet';
                         } else {
-                            walletName = 'Browser Wallet';
+                            walletName = '👛 Browser Wallet';
                         }
 
                         accounts = await window.ethereum.request({
@@ -744,33 +788,31 @@
                         
                         if (accounts && accounts.length > 0) {
                             walletProvider = window.ethereum;
-                            console.log(`✅ ${walletName} connected`);
+                            console.log(`✅ ${walletName} connected:`, accounts[0]);
                         }
-                    } catch (ethError) {
-                        console.error('window.ethereum error:', ethError);
+                    } else {
+                        throw new Error('No wallet found. Please install MetaMask or open in Farcaster app.');
                     }
                 }
 
                 if (!walletProvider || !accounts || accounts.length === 0) {
-                    throw new Error('No wallet found. Please install MetaMask or use Farcaster app.');
+                    throw new Error('Wallet connection failed. No accounts returned.');
                 }
 
                 userAddress = accounts[0];
-                console.log('✅ Wallet connected:', userAddress);
-                console.log('📱 Wallet type:', walletName);
+                console.log('✅ Connected address:', userAddress);
 
-                // Créer le provider avec ethers
+                // Créer le provider
                 provider = new ethers.providers.Web3Provider(walletProvider);
                 signer = provider.getSigner();
                 
-                console.log('✅ Provider created');
+                console.log('✅ Ethers provider created');
 
-                // Vérifier le réseau actuel
+                // Vérifier et switcher vers Celo
                 const network = await provider.getNetwork();
                 const currentChainId = '0x' + network.chainId.toString(16);
-                console.log('Current network:', network.name, currentChainId);
+                console.log('🌐 Current network:', network.name, currentChainId);
 
-                // Vérifier si on est sur Celo
                 if (currentChainId !== CELO_MAINNET_CHAIN_ID) {
                     console.log('⚠️ Not on Celo, switching...');
                     showMessage('Switching to Celo network... 🔄');
@@ -782,63 +824,53 @@
                         });
                         console.log('✅ Switched to Celo');
                     } catch (switchError) {
-                        // Si le réseau n'existe pas, l'ajouter
                         if (switchError.code === 4902 || switchError.message.includes('Unrecognized chain')) {
-                            console.log('Adding Celo network...');
-                            try {
-                                await walletProvider.request({
-                                    method: 'wallet_addEthereumChain',
-                                    params: [{
-                                        chainId: CELO_MAINNET_CHAIN_ID,
-                                        chainName: 'Celo Mainnet',
-                                        nativeCurrency: {
-                                            name: 'CELO',
-                                            symbol: 'CELO',
-                                            decimals: 18
-                                        },
-                                        rpcUrls: [CELO_RPC_URL],
-                                        blockExplorerUrls: ['https://explorer.celo.org']
-                                    }]
-                                });
-                                console.log('✅ Celo network added and switched');
-                            } catch (addError) {
-                                throw new Error('Failed to add Celo network: ' + addError.message);
-                            }
+                            console.log('➕ Adding Celo network...');
+                            await walletProvider.request({
+                                method: 'wallet_addEthereumChain',
+                                params: [{
+                                    chainId: CELO_MAINNET_CHAIN_ID,
+                                    chainName: 'Celo Mainnet',
+                                    nativeCurrency: {
+                                        name: 'CELO',
+                                        symbol: 'CELO',
+                                        decimals: 18
+                                    },
+                                    rpcUrls: [CELO_RPC_URL],
+                                    blockExplorerUrls: ['https://explorer.celo.org']
+                                }]
+                            });
+                            console.log('✅ Celo network added');
                         } else {
                             throw switchError;
                         }
                     }
                     
-                    // Recréer le provider après le changement de réseau
+                    // Recréer provider après switch
                     provider = new ethers.providers.Web3Provider(walletProvider);
                     signer = provider.getSigner();
                 }
 
-                // Vérifier la balance CELO
+                // Vérifier balance CELO
                 const balance = await provider.getBalance(userAddress);
                 const celoBalance = ethers.utils.formatEther(balance);
                 console.log('💰 CELO balance:', celoBalance);
 
                 if (parseFloat(celoBalance) < 0.001) {
-                    showMessage('⚠️ Low CELO balance. Get free CELO from faucet.celo.org', 'warning');
-                } else {
-                    console.log('✅ Sufficient CELO balance');
+                    showMessage('⚠️ Low CELO. Get free CELO from faucet.celo.org', 'warning');
                 }
 
-                // Créer l'instance du contrat
+                // Créer contrat
                 contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                console.log('✅ Contract instance created');
+                console.log('✅ Contract ready');
 
-                // Vérifier si une partie active existe
+                // Vérifier partie active
                 try {
                     const activeGameData = await contract.activeGames(userAddress);
                     const gameStatus = parseInt(activeGameData.status.toString());
-                    console.log('Active game status:', gameStatus);
                     
                     if (gameStatus === 0) {
                         console.log('⚠️ Active game detected');
-                        showMessage('⚠️ You have an active game. Click Start to reset.', 'warning');
-                        
                         const contractBoard = await contract.getBoard(userAddress);
                         board = contractBoard.map(cell => {
                             if (typeof cell === 'number') return cell;
@@ -849,26 +881,26 @@
                         gameActive = true;
                         document.getElementById('startBtn').disabled = true;
                         document.getElementById('resetBtn').disabled = false;
+                        showMessage('⚠️ Active game found. Click Start to reset.', 'warning');
                     }
                 } catch (gameCheckError) {
-                    console.log('No active game or error checking:', gameCheckError.message);
+                    console.log('No active game');
                 }
 
                 walletConnected = true;
 
-                // Mettre à jour l'UI
-                document.getElementById('walletLabel').textContent = walletName + ' ✓';
+                // Update UI
+                walletLabel.textContent = walletName + ' ✓';
                 document.getElementById('walletAddress').textContent = 
                     userAddress.substring(0, 8) + '...' + userAddress.substring(36);
                 document.getElementById('walletAddress').style.display = 'block';
                 connectBtn.style.display = 'none';
 
-                // Charger les stats et le leaderboard
                 await loadOnChainStats();
                 await loadLeaderboard();
 
                 if (!gameActive) {
-                    showMessage('🎉 Connected with ' + walletName + '!', 'win');
+                    showMessage(`🎉 Connected with ${walletName}!`, 'win');
                 }
 
             } catch (error) {
@@ -878,19 +910,21 @@
                 
                 if (error.message) {
                     if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
-                        errorMsg = 'Connection rejected by user';
+                        errorMsg = 'Connection rejected';
+                    } else if (error.message.includes('Farcaster wallet')) {
+                        errorMsg = error.message;
                     } else if (error.message.includes('No wallet')) {
                         errorMsg = 'No wallet found';
-                    } else if (error.message.includes('Celo network')) {
-                        errorMsg = 'Failed to switch to Celo';
                     } else {
                         errorMsg = error.message.substring(0, 60);
                     }
                 }
                 
                 showMessage(errorMsg + ' 😞', 'lose');
+                walletLabel.textContent = 'Connection failed';
+                connectBtn.style.display = 'block';
                 connectBtn.textContent = 'Retry';
-                connectBtn.disabled = false;
+                connectBtn.onclick = connectWallet;
             } finally {
                 isProcessing = false;
             }
@@ -900,7 +934,7 @@
             if (isProcessing) return;
             
             if (currentMode === 'chain' && !walletConnected) {
-                showMessage('Please connect wallet first! 👛', 'lose');
+                showMessage('Please wait, connecting wallet... ⏳', 'warning');
                 return;
             }
 
@@ -908,13 +942,13 @@
             
             try {
                 if (currentMode === 'chain') {
-                    // Vérifier et abandonner automatiquement une partie active
+                    // Auto-forfeit si partie active
                     try {
                         const activeGameData = await contract.activeGames(userAddress);
                         const gameStatus = parseInt(activeGameData.status.toString());
                         
                         if (gameStatus === 0) {
-                            console.log('🏳️ Active game found, forfeiting...');
+                            console.log('🏳️ Forfeiting active game...');
                             showMessage('Resetting active game... 🔄');
                             
                             const forfeitTx = await contract.forfeitGame({
@@ -923,14 +957,12 @@
                             
                             await forfeitTx.wait();
                             console.log('✅ Previous game forfeited');
-                            
                             await new Promise(resolve => setTimeout(resolve, 1500));
                         }
                     } catch (checkError) {
                         console.log('No active game to forfeit');
                     }
                     
-                    // Démarrer nouvelle partie
                     showMessage('Starting new game... ⏳');
                     
                     const tx = await contract.startGame({
@@ -962,12 +994,12 @@
                 
                 let errorMsg = 'Failed to start game';
                 if (error.message) {
-                    if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
+                    if (error.message.includes('user rejected')) {
                         errorMsg = 'Transaction cancelled';
                     } else if (error.message.includes('insufficient funds')) {
                         errorMsg = 'Insufficient CELO for gas';
                     } else if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
-                        errorMsg = 'Contract error. Try resetting first.';
+                        errorMsg = 'Contract error. Try Reset first.';
                     } else {
                         errorMsg = error.message.substring(0, 60);
                     }
@@ -997,7 +1029,6 @@
                     showMessage('Waiting for AI response... 🤖');
                     await tx.wait();
                     
-                    // Récupérer le plateau mis à jour
                     const contractBoard = await contract.getBoard(userAddress);
                     board = contractBoard.map(cell => {
                         if (typeof cell === 'number') return cell;
@@ -1006,7 +1037,6 @@
                     });
                     updateBoardDisplay();
                     
-                    // Vérifier fin de partie
                     if (checkWin(1)) {
                         showMessage('🎉 You Win!', 'win');
                         gameActive = false;
@@ -1035,7 +1065,6 @@
                         showMessage('Your turn! 👆');
                     }
                 } else {
-                    // Free play mode
                     board[position] = 1;
                     updateBoardDisplay();
 
@@ -1186,7 +1215,7 @@
             }
             
             if (gameActive) {
-                if (confirm('⚠️ Abandon this game? This will count as a loss and cost gas.')) {
+                if (confirm('⚠️ Abandon this game? This will count as a loss.')) {
                     forfeitOnChainGame();
                 }
             } else {
@@ -1217,19 +1246,13 @@
                 document.getElementById('startBtn').disabled = false;
                 document.getElementById('resetBtn').disabled = true;
                 
-                showMessage('Game abandoned. Ready for new game! 🆕');
+                showMessage('Game abandoned. Ready! 🆕');
                 
                 await loadOnChainStats();
                 await loadLeaderboard();
             } catch (error) {
                 console.error('Forfeit error:', error);
-                
-                let errorMsg = 'Failed to abandon';
-                if (error.message && error.message.includes('user rejected')) {
-                    errorMsg = 'Cancelled';
-                }
-                
-                showMessage(errorMsg + ' 😞', 'lose');
+                showMessage('Failed to abandon 😞', 'lose');
             } finally {
                 isProcessing = false;
             }
