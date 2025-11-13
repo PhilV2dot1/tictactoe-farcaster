@@ -740,22 +740,24 @@
                         });
                     }
 
-                    if (window.farcasterSDK) {
+                    // Dans Farcaster, utiliser window.ethereum directement
+                    // Farcaster injecte son wallet via window.ethereum
+                    if (window.ethereum) {
                         try {
-                            console.log('🟣 Getting Farcaster wallet provider...');
-                            const ethProvider = await window.farcasterSDK.wallet.ethProvider;
+                            console.log('🟣 Using Farcaster injected wallet...');
                             
-                            if (!ethProvider) {
-                                throw new Error('Farcaster wallet provider not available');
-                            }
-
-                            console.log('🟣 Requesting Farcaster accounts...');
-                            accounts = await ethProvider.request({
+                            // Vérifier si c'est bien le wallet Farcaster
+                            const isFarcasterWallet = window.ethereum.isFarcaster || 
+                                                     (window.farcasterContext && window.ethereum);
+                            
+                            console.log('🟣 Is Farcaster wallet:', isFarcasterWallet);
+                            
+                            accounts = await window.ethereum.request({
                                 method: 'eth_requestAccounts'
                             });
                             
                             if (accounts && accounts.length > 0) {
-                                walletProvider = ethProvider;
+                                walletProvider = window.ethereum;
                                 walletName = '🟣 Farcaster Wallet';
                                 usedFarcaster = true;
                                 console.log('✅ FARCASTER WALLET CONNECTED:', accounts[0]);
@@ -764,10 +766,18 @@
                             }
                         } catch (farcasterError) {
                             console.error('❌ Farcaster wallet error:', farcasterError);
-                            throw new Error('Farcaster wallet connection failed. Please try again or contact support.');
+                            
+                            // Message plus détaillé
+                            if (farcasterError.code === 4001) {
+                                throw new Error('Wallet connection rejected. Please try again.');
+                            } else if (farcasterError.message.includes('request')) {
+                                throw new Error('Wallet not responding. Please refresh and try again.');
+                            } else {
+                                throw new Error('Farcaster wallet error: ' + farcasterError.message);
+                            }
                         }
                     } else {
-                        throw new Error('Farcaster SDK not loaded. Please refresh the page.');
+                        throw new Error('No wallet found in Farcaster. Please make sure you have a wallet set up in the Farcaster app.');
                     }
                 } else {
                     // EN DEHORS de Farcaster : utiliser window.ethereum
