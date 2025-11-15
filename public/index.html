@@ -2,179 +2,132 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tic Tac Toe - Celo</title>
-    
-    <link rel="preconnect" href="https://cdn.jsdelivr.net">
-    
-    <!-- Ethers.js - plus stable pour ce use case -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            -webkit-tap-highlight-color: transparent;
-        }
-
-        :root {
-            --primary: #35D07F;
-            --primary-dark: #2AB56F;
-            --secondary: #FBCC5C;
-            --danger: #FF5252;
-            --warning: #FFA726;
-            --bg-yellow: #FCFF52;
-            --text-primary: #1A1A1A;
-            --text-secondary: #4A4A4A;
-            --shadow: 0 4px 20px rgba(53, 208, 127, 0.3);
         }
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: linear-gradient(135deg, #FCFF52 0%, #FFE55C 100%);
             min-height: 100vh;
-            color: var(--text-primary);
-            overflow-x: hidden;
-            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+            color: #1A1A1A;
         }
 
-        .app-container {
+        .container {
             max-width: 500px;
             margin: 0 auto;
-            padding: 12px;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
+            padding: 20px;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 16px;
-            animation: fadeInDown 0.5s ease;
+            margin-bottom: 24px;
         }
 
         .logo {
-            font-size: 2.5em;
-            margin-bottom: 4px;
-            filter: drop-shadow(0 2px 8px rgba(53, 208, 127, 0.5));
+            font-size: 3em;
+            margin-bottom: 8px;
         }
 
         .title {
-            font-size: 1.5em;
+            font-size: 2em;
             font-weight: 700;
             background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
-            background-clip: text;
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
-            color: transparent;
             margin-bottom: 4px;
         }
 
-        .subtitle {
-            font-size: 0.75em;
-            color: var(--text-secondary);
+        .network-badge {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 12px;
+            background: rgba(53, 208, 127, 0.2);
+            color: #2AB56F;
+            font-size: 0.85em;
             font-weight: 600;
         }
 
         .mode-toggle {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 8px;
-            background: rgba(255, 255, 255, 0.9);
-            padding: 6px;
+            gap: 12px;
+            background: white;
+            padding: 8px;
             border-radius: 16px;
-            margin-bottom: 16px;
+            margin-bottom: 20px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.1);
         }
 
         .mode-btn {
-            padding: 12px;
+            padding: 16px;
             border: none;
             background: transparent;
-            color: var(--text-secondary);
+            color: #666;
             border-radius: 12px;
             cursor: pointer;
-            font-size: 0.9em;
+            font-size: 1em;
             font-weight: 600;
             transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
         }
 
         .mode-btn.active {
             background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
             color: white;
             box-shadow: 0 4px 12px rgba(53, 208, 127, 0.3);
-            transform: translateY(-2px);
         }
 
         .wallet-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
             display: none;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
-        .wallet-card.active {
+        .wallet-card.show {
             display: block;
-            animation: fadeIn 0.3s ease;
-        }
-
-        .wallet-status {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
         }
 
         .wallet-info {
-            flex: 1;
-            min-width: 0;
+            margin-bottom: 12px;
         }
 
         .wallet-label {
-            font-size: 0.75em;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 8px;
         }
 
         .wallet-address {
             font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            color: var(--text-primary);
-            background: rgba(53, 208, 127, 0.15);
-            padding: 6px 10px;
+            background: rgba(53, 208, 127, 0.1);
+            padding: 10px;
             border-radius: 8px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
+            font-size: 0.95em;
         }
 
         .btn {
-            padding: 10px 20px;
+            width: 100%;
+            padding: 16px;
             border: none;
             border-radius: 12px;
+            font-size: 1em;
             font-weight: 600;
-            font-size: 0.9em;
             cursor: pointer;
             transition: all 0.3s;
-            box-shadow: var(--shadow);
-            white-space: nowrap;
-        }
-
-        .btn:active {
-            transform: scale(0.95);
         }
 
         .btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
-            transform: none !important;
         }
 
         .btn-primary {
@@ -193,56 +146,41 @@
         }
 
         .game-card {
-            background: rgba(255, 255, 255, 0.95);
+            background: white;
             border-radius: 20px;
-            padding: 20px;
-            margin-bottom: 16px;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
-        .status-banner {
-            background: linear-gradient(135deg, rgba(53, 208, 127, 0.2) 0%, rgba(42, 181, 111, 0.2) 100%);
+        .status {
+            background: rgba(53, 208, 127, 0.15);
             border-left: 4px solid #35D07F;
-            padding: 12px 16px;
+            padding: 16px;
             border-radius: 12px;
-            margin-bottom: 20px;
-            font-size: 0.95em;
+            margin-bottom: 24px;
             font-weight: 600;
             text-align: center;
-            min-height: 44px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-primary);
         }
 
-        .status-banner.win {
-            background: linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(69, 160, 73, 0.2) 100%);
+        .status.win {
+            background: rgba(76, 175, 80, 0.15);
             border-left-color: #4CAF50;
         }
 
-        .status-banner.lose {
-            background: linear-gradient(135deg, rgba(255, 82, 82, 0.2) 0%, rgba(224, 69, 69, 0.2) 100%);
+        .status.lose {
+            background: rgba(255, 82, 82, 0.15);
             border-left-color: #FF5252;
         }
 
-        .status-banner.draw {
-            background: linear-gradient(135deg, rgba(255, 167, 38, 0.2) 0%, rgba(255, 152, 0, 0.2) 100%);
-            border-left-color: #FFA726;
-        }
-
-        .board-container {
-            aspect-ratio: 1;
-            max-width: 380px;
-            margin: 0 auto 20px;
-        }
-
-        .game-board {
+        .board {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
-            width: 100%;
-            height: 100%;
+            gap: 12px;
+            margin-bottom: 24px;
+            max-width: 350px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .cell {
@@ -250,314 +188,126 @@
             background: linear-gradient(135deg, #FFFFFF 0%, #F5F5F5 100%);
             border: 3px solid rgba(53, 208, 127, 0.3);
             border-radius: 16px;
-            font-size: clamp(2.5em, 8vw, 3.5em);
+            font-size: 3em;
             font-weight: 700;
             cursor: pointer;
-            transition: all 0.2s;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
+            transition: all 0.2s;
             user-select: none;
         }
 
         .cell:hover:not(.filled) {
-            background: linear-gradient(135deg, rgba(53, 208, 127, 0.1) 0%, rgba(42, 181, 111, 0.05) 100%);
             transform: scale(1.05);
-        }
-
-        .cell:active:not(.filled) {
-            transform: scale(0.95);
+            background: rgba(53, 208, 127, 0.1);
         }
 
         .cell.filled {
             cursor: not-allowed;
-            border-color: rgba(53, 208, 127, 0.6);
         }
 
         .cell.x {
             color: #35D07F;
-            text-shadow: 0 0 20px rgba(53, 208, 127, 0.5);
-            animation: placeX 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
         .cell.o {
             color: #FBCC5C;
-            text-shadow: 0 0 20px rgba(251, 204, 92, 0.5);
-            animation: placeO 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55);
         }
 
-        .game-controls {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 16px;
+        .controls {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
         }
 
-        .game-controls .btn {
-            flex: 1;
-            padding: 14px;
-            font-size: 1em;
-        }
-
-        .stats-section {
-            background: rgba(255, 255, 255, 0.95);
+        .stats {
+            background: white;
             border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
         }
 
         .stats-header {
-            font-size: 1.1em;
+            font-size: 1.2em;
             font-weight: 700;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: var(--text-primary);
+            margin-bottom: 16px;
         }
 
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 10px;
+            gap: 12px;
         }
 
         .stat-card {
-            background: linear-gradient(135deg, #F8F8F8 0%, #FFFFFF 100%);
+            background: #F8F8F8;
             border-radius: 12px;
-            padding: 12px;
+            padding: 16px;
             text-align: center;
-            border: 2px solid rgba(53, 208, 127, 0.2);
         }
 
         .stat-value {
-            font-size: 1.8em;
+            font-size: 2em;
             font-weight: 700;
             color: #35D07F;
-            line-height: 1;
             margin-bottom: 4px;
         }
 
         .stat-label {
-            font-size: 0.7em;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            font-weight: 600;
-        }
-
-        .leaderboard {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 16px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-        }
-
-        .leaderboard-scroll {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-top: 12px;
-        }
-
-        .leaderboard-item {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background: linear-gradient(135deg, #F8F8F8 0%, #FFFFFF 100%);
-            border-radius: 12px;
-            margin-bottom: 8px;
-            border: 2px solid rgba(53, 208, 127, 0.2);
-        }
-
-        .leaderboard-rank {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #35D07F;
-            min-width: 30px;
-        }
-
-        .leaderboard-rank.top3 {
-            font-size: 1.5em;
-        }
-
-        .leaderboard-info {
-            flex: 1;
-            min-width: 0;
-        }
-
-        .leaderboard-address {
-            font-family: 'Courier New', monospace;
-            font-size: 0.85em;
-            color: var(--text-primary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-            font-weight: 600;
-        }
-
-        .leaderboard-stats {
             font-size: 0.75em;
-            color: var(--text-secondary);
-            margin-top: 2px;
-            font-weight: 500;
-        }
-
-        .leaderboard-wins {
-            font-size: 1.2em;
-            font-weight: 700;
-            color: #FBCC5C;
-            min-width: 50px;
-            text-align: right;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 20px;
-            color: var(--text-secondary);
-            font-size: 0.9em;
-        }
-
-        .spinner {
-            border: 3px solid rgba(53, 208, 127, 0.2);
-            border-top: 3px solid #35D07F;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
-        }
-
-        .network-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 8px;
-            font-size: 0.7em;
+            color: #666;
+            text-transform: uppercase;
             font-weight: 600;
-            background: rgba(53, 208, 127, 0.2);
-            color: var(--primary-dark);
-            margin-left: 8px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-
-        @keyframes fadeInDown {
-            from {
-                opacity: 0;
-                transform: translateY(-20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        @keyframes placeX {
-            from {
-                opacity: 0;
-                transform: scale(0) rotate(-180deg);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) rotate(0);
-            }
-        }
-
-        @keyframes placeO {
-            from {
-                opacity: 0;
-                transform: scale(0) rotate(180deg);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1) rotate(0);
-            }
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        @media (max-width: 400px) {
-            .app-container {
-                padding: 8px;
-            }
-            .stats-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
         }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <div class="container">
         <div class="header">
             <div class="logo">🎮</div>
             <h1 class="title">Tic Tac Toe</h1>
-            <p class="subtitle">Powered by Celo</p>
+            <span class="network-badge">Celo Mainnet</span>
         </div>
 
         <div class="mode-toggle">
-            <button class="mode-btn active" onclick="switchMode('free')">
-                <span>🎯</span>
-                <span>Free Play</span>
+            <button class="mode-btn active" id="freeBtn">
+                🎯 Free Play
             </button>
-            <button class="mode-btn" onclick="switchMode('chain')">
-                <span>⛓️</span>
-                <span>On-Chain</span>
+            <button class="mode-btn" id="chainBtn">
+                ⛓️ On-Chain
             </button>
         </div>
 
         <div class="wallet-card" id="walletCard">
-            <div class="wallet-status">
-                <div class="wallet-info">
-                    <div class="wallet-label" id="walletLabel">Click to connect</div>
-                    <div class="wallet-address" id="walletAddress" style="display:none;"></div>
-                </div>
-                <button class="btn btn-primary" id="connectBtn" onclick="connectWallet()">
-                    Connect
-                </button>
+            <div class="wallet-info">
+                <div class="wallet-label" id="walletLabel">Not connected</div>
+                <div class="wallet-address" id="walletAddress" style="display:none;"></div>
             </div>
+            <button class="btn btn-primary" id="connectBtn">
+                Connect Farcaster Wallet
+            </button>
         </div>
 
         <div class="game-card">
-            <div class="status-banner" id="statusBanner">
+            <div class="status" id="status">
                 Click Start to begin! 🚀
             </div>
 
-            <div class="board-container">
-                <div class="game-board" id="gameBoard">
-                    <div class="cell" onclick="makeMove(0)"></div>
-                    <div class="cell" onclick="makeMove(1)"></div>
-                    <div class="cell" onclick="makeMove(2)"></div>
-                    <div class="cell" onclick="makeMove(3)"></div>
-                    <div class="cell" onclick="makeMove(4)"></div>
-                    <div class="cell" onclick="makeMove(5)"></div>
-                    <div class="cell" onclick="makeMove(6)"></div>
-                    <div class="cell" onclick="makeMove(7)"></div>
-                    <div class="cell" onclick="makeMove(8)"></div>
-                </div>
-            </div>
+            <div class="board" id="board"></div>
 
-            <div class="game-controls">
-                <button class="btn btn-success" id="startBtn" onclick="startGame()">
+            <div class="controls">
+                <button class="btn btn-success" id="startBtn">
                     Start Game
                 </button>
-                <button class="btn btn-danger" id="resetBtn" onclick="resetGame()" disabled>
+                <button class="btn btn-danger" id="resetBtn" disabled>
                     Reset
                 </button>
             </div>
         </div>
 
-        <div class="stats-section">
-            <div class="stats-header">
-                <span>📊</span>
-                <span>Your Stats</span>
-            </div>
+        <div class="stats">
+            <div class="stats-header">📊 Your Stats</div>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-value" id="statGames">0</div>
@@ -571,235 +321,144 @@
                     <div class="stat-value" id="statLosses">0</div>
                     <div class="stat-label">Losses</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statDraws">0</div>
-                    <div class="stat-label">Draws</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statWinRate">0%</div>
-                    <div class="stat-label">Win Rate</div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-value" id="statStreak">0</div>
-                    <div class="stat-label">Streak</div>
-                </div>
-            </div>
-        </div>
-
-        <div class="leaderboard" id="leaderboard" style="display:none;">
-            <div class="stats-header">
-                <span>🏆</span>
-                <span>Leaderboard</span>
-            </div>
-            <div class="leaderboard-scroll" id="leaderboardContent">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    Loading...
-                </div>
             </div>
         </div>
     </div>
 
-    <script>
-        // Configuration Celo - Utiliser ALFAJORES (testnet) pour les tests
-        const USE_TESTNET = true; // Changez à false pour mainnet
+    <!-- Farcaster Frame SDK -->
+    <script type="module">
+        import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
         
+        // CRITICAL: Call ready immediately to remove splash screen
+        sdk.actions.ready({});
+        
+        window.farcasterSDK = sdk;
+        console.log('✅ Farcaster SDK ready');
+        
+        // Get Farcaster context
+        sdk.context.then(context => {
+            window.farcasterContext = context;
+            console.log('📱 Farcaster context:', context);
+        }).catch(e => {
+            console.log('ℹ️ Not in Farcaster frame');
+        });
+    </script>
+
+    <!-- Ethers.js for Celo -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+
+    <script>
+        // ============================================
+        // CONFIGURATION CELO MAINNET (Production)
+        // ============================================
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         
-        // Configuration réseaux Celo
         const CELO_MAINNET = {
-            chainId: '0xa4ec', // 42220
-            chainName: 'Celo Mainnet',
-            nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
+            chainId: 42220,
+            chainIdHex: '0xa4ec',
+            name: 'Celo Mainnet',
+            nativeCurrency: {
+                name: 'CELO',
+                symbol: 'CELO',
+                decimals: 18
+            },
             rpcUrls: ['https://forno.celo.org'],
             blockExplorerUrls: ['https://explorer.celo.org']
         };
-        
-        const CELO_ALFAJORES = {
-            chainId: '0xaef3', // 44787
-            chainName: 'Celo Alfajores Testnet',
-            nativeCurrency: { name: 'CELO', symbol: 'CELO', decimals: 18 },
-            rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
-            blockExplorerUrls: ['https://alfajores.celoscan.io']
-        };
-        
-        const CURRENT_NETWORK = USE_TESTNET ? CELO_ALFAJORES : CELO_MAINNET;
-        
+
         const CONTRACT_ABI = [
-            {
-                "inputs": [],
-                "name": "startGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "uint8", "name": "position", "type": "uint8"}],
-                "name": "makeMove",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "forfeitGame",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "address", "name": "player", "type": "address"}],
-                "name": "getBoard",
-                "outputs": [{"internalType": "uint8[9]", "name": "", "type": "uint8[9]"}],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "address", "name": "player", "type": "address"}],
-                "name": "getPlayerStats",
-                "outputs": [
-                    {"internalType": "uint256", "name": "gamesPlayed", "type": "uint256"},
-                    {"internalType": "uint256", "name": "wins", "type": "uint256"},
-                    {"internalType": "uint256", "name": "losses", "type": "uint256"},
-                    {"internalType": "uint256", "name": "draws", "type": "uint256"},
-                    {"internalType": "uint256", "name": "winRate", "type": "uint256"},
-                    {"internalType": "uint256", "name": "currentStreak", "type": "uint256"},
-                    {"internalType": "uint256", "name": "bestStreak", "type": "uint256"},
-                    {"internalType": "uint256", "name": "fastestWin", "type": "uint256"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "getLeaderboard",
-                "outputs": [
-                    {
-                        "components": [
-                            {"internalType": "address", "name": "player", "type": "address"},
-                            {"internalType": "uint256", "name": "wins", "type": "uint256"},
-                            {"internalType": "uint256", "name": "winRate", "type": "uint256"},
-                            {"internalType": "uint256", "name": "bestStreak", "type": "uint256"},
-                            {"internalType": "uint256", "name": "fastestWin", "type": "uint256"}
-                        ],
-                        "internalType": "struct TicTacToe.LeaderboardEntry[]",
-                        "name": "",
-                        "type": "tuple[]"
-                    }
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "address", "name": "", "type": "address"}],
-                "name": "activeGames",
-                "outputs": [
-                    {"internalType": "address", "name": "player", "type": "address"},
-                    {"internalType": "uint8", "name": "currentTurn", "type": "uint8"},
-                    {"internalType": "uint8", "name": "status", "type": "uint8"},
-                    {"internalType": "uint256", "name": "startTime", "type": "uint256"},
-                    {"internalType": "uint256", "name": "endTime", "type": "uint256"},
-                    {"internalType": "uint8", "name": "moveCount", "type": "uint8"}
-                ],
-                "stateMutability": "view",
-                "type": "function"
-            }
+            "function startGame() external",
+            "function makeMove(uint8 position) external",
+            "function forfeitGame() external",
+            "function getBoard(address player) external view returns (uint8[9])",
+            "function getPlayerStats(address player) external view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
+            "function activeGames(address) external view returns (address player, uint8[9] board, uint8 currentTurn, uint8 status, uint256 startTime, uint256 endTime, uint8 moveCount)"
         ];
 
-        
-        let currentMode = 'free';
-        let gameActive = false;
-        let board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-        let currentTurn = 1;
-        
-        let walletConnected = false;
-        let provider = null;
-        let signer = null;
-        let contract = null;
-        let userAddress = null;
-        let isProcessing = false;
-
-        let localStats = {
-            gamesPlayed: 0,
-            wins: 0,
-            losses: 0,
-            draws: 0,
-            currentStreak: 0
+        // ============================================
+        // STATE MANAGEMENT
+        // ============================================
+        let gameState = {
+            mode: 'free',
+            connected: false,
+            provider: null,
+            contract: null,
+            address: null,
+            board: [0,0,0,0,0,0,0,0,0],
+            active: false,
+            processing: false,
+            stats: { games: 0, wins: 0, losses: 0 }
         };
 
-        // Attendre que ethers soit chargé
-        function waitForEthers(callback, attempts = 0) {
-            if (typeof ethers !== 'undefined') {
-                callback();
-            } else if (attempts < 30) {
-                setTimeout(() => waitForEthers(callback, attempts + 1), 100);
-            } else {
-                console.error('Ethers.js failed to load');
-                showMessage('Error loading libraries. Please refresh 🔄', 'lose');
-            }
-        }
+        // ============================================
+        // DOM ELEMENTS
+        // ============================================
+        const elements = {
+            freeBtn: document.getElementById('freeBtn'),
+            chainBtn: document.getElementById('chainBtn'),
+            walletCard: document.getElementById('walletCard'),
+            walletLabel: document.getElementById('walletLabel'),
+            walletAddress: document.getElementById('walletAddress'),
+            connectBtn: document.getElementById('connectBtn'),
+            status: document.getElementById('status'),
+            board: document.getElementById('board'),
+            startBtn: document.getElementById('startBtn'),
+            resetBtn: document.getElementById('resetBtn')
+        };
 
+        // ============================================
+        // INITIALIZATION
+        // ============================================
         function init() {
-            waitForEthers(() => {
-                console.log('✅ Ethers.js loaded:', ethers.version);
-                loadLocalStats();
-                updateStatsDisplay();
-                showMessage('Ready to play! 🎮');
-                
-                // Mettre à jour le badge réseau
-                const subtitle = document.querySelector('.subtitle');
-                const networkName = USE_TESTNET ? 'Alfajores Testnet' : 'Mainnet';
-                subtitle.innerHTML = `Powered by Celo <span class="network-badge">${networkName}</span>`;
-            });
-        }
+            console.log('🎮 Initializing Tic Tac Toe on Celo Mainnet...');
+            
+            // Create board cells
+            for (let i = 0; i < 9; i++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.dataset.index = i;
+                cell.onclick = () => handleMove(i);
+                elements.board.appendChild(cell);
+            }
 
-        window.switchMode = async function(mode) {
-            if (isProcessing) return;
-            
-            currentMode = mode;
-            
-            document.querySelectorAll('.mode-btn').forEach(btn => btn.classList.remove('active'));
-            event.target.closest('.mode-btn').classList.add('active');
+            // Event listeners
+            elements.freeBtn.onclick = () => switchMode('free');
+            elements.chainBtn.onclick = () => switchMode('chain');
+            elements.connectBtn.onclick = connectWallet;
+            elements.startBtn.onclick = startGame;
+            elements.resetBtn.onclick = resetGame;
 
-            const walletCard = document.getElementById('walletCard');
-            const leaderboard = document.getElementById('leaderboard');
-            
-            if (mode === 'chain') {
-                walletCard.classList.add('active');
-                leaderboard.style.display = 'block';
-                
-                if (walletConnected) {
-                    await loadOnChainStats();
-                    await loadLeaderboard();
-                }
-            } else {
-                walletCard.classList.remove('active');
-                leaderboard.style.display = 'none';
+            // Load stats from localStorage
+            const saved = localStorage.getItem('tictactoe_celo_stats');
+            if (saved) {
+                gameState.stats = JSON.parse(saved);
                 updateStatsDisplay();
             }
 
-            resetGame();
-        };
+            console.log('✅ App initialized on Celo Mainnet');
+        }
 
-        window.connectWallet = async function() {
-            if (walletConnected || isProcessing) return;
-            isProcessing = true;
-            
-            const connectBtn = document.getElementById('connectBtn');
-            const walletLabel = document.getElementById('walletLabel');
-            
+        // ============================================
+        // WALLET CONNECTION (Farcaster Native)
+        // ============================================
+        async function connectWallet() {
+            if (gameState.processing) return;
+            gameState.processing = true;
+
             try {
-                connectBtn.disabled = true;
-                connectBtn.textContent = 'Connecting...';
-                walletLabel.textContent = 'Connecting...';
-                showMessage('Connecting wallet... 🔗');
-                
-                // Vérifier qu'on a window.ethereum
+                setStatus('Connecting to Farcaster wallet... 🔗');
+                elements.connectBtn.disabled = true;
+                elements.connectBtn.textContent = 'Connecting...';
+
+                // Check for Ethereum provider (injected by Farcaster)
                 if (!window.ethereum) {
-                    throw new Error('No wallet found. Please install MetaMask or use Farcaster app with wallet enabled.');
+                    throw new Error('No wallet found. Please open this app in Farcaster.');
                 }
 
-                console.log('🔌 Requesting accounts...');
+                console.log('🔌 Detected wallet provider');
+                console.log('📱 Farcaster context:', window.farcasterContext);
+
+                // Request accounts (Farcaster wallet)
                 const accounts = await window.ethereum.request({
                     method: 'eth_requestAccounts'
                 });
@@ -808,590 +467,443 @@
                     throw new Error('No accounts returned from wallet');
                 }
 
-                userAddress = accounts[0];
-                console.log('✅ Account connected:', userAddress);
+                gameState.address = accounts[0];
+                console.log('✅ Wallet connected:', gameState.address);
 
-                // Déterminer le nom du wallet
-                let walletName = '👛 Wallet';
-                if (window.ethereum.isMetaMask) {
-                    walletName = '🦊 MetaMask';
-                } else if (window.ethereum.isCoinbaseWallet) {
-                    walletName = '💼 Coinbase';
-                } else if (window.parent !== window) {
-                    walletName = '🟣 Farcaster';
-                }
+                // Create ethers provider
+                gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
+                
+                // Check current network
+                const network = await gameState.provider.getNetwork();
+                console.log('🌐 Current network:', network.chainId, network.name);
 
-                console.log('🌐 Target network:', CURRENT_NETWORK.chainName);
+                // Switch to Celo Mainnet if needed
+                if (network.chainId !== CELO_MAINNET.chainId) {
+                    console.log('⚠️ Wrong network, switching to Celo Mainnet...');
+                    setStatus('Switching to Celo Mainnet... 🔄');
 
-                // Créer le provider
-                provider = new ethers.providers.Web3Provider(window.ethereum);
-                signer = provider.getSigner();
-                console.log('✅ Provider created');
-
-                // Vérifier le réseau actuel
-                const chainId = await window.ethereum.request({ method: 'eth_chainId' });
-                console.log('Current chain ID:', chainId, 'Expected:', CURRENT_NETWORK.chainId);
-
-                if (chainId.toLowerCase() !== CURRENT_NETWORK.chainId.toLowerCase()) {
-                    console.log('⚠️ Wrong network, switching to', CURRENT_NETWORK.chainName);
-                    showMessage('Switching to ' + CURRENT_NETWORK.chainName + '... 🔄');
-                    
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: CURRENT_NETWORK.chainId }]
+                            params: [{ chainId: CELO_MAINNET.chainIdHex }]
                         });
-                        console.log('✅ Switched to', CURRENT_NETWORK.chainName);
+                        console.log('✅ Switched to Celo Mainnet');
                     } catch (switchError) {
-                        // Si le réseau n'existe pas, l'ajouter
-                        if (switchError.code === 4902) {
-                            console.log('➕ Adding', CURRENT_NETWORK.chainName, '...');
+                        // Network doesn't exist, add it
+                        if (switchError.code === 4902 || switchError.code === -32603) {
+                            console.log('➕ Adding Celo Mainnet to wallet...');
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
-                                params: [CURRENT_NETWORK]
+                                params: [CELO_MAINNET]
                             });
-                            console.log('✅', CURRENT_NETWORK.chainName, 'added and switched');
+                            console.log('✅ Celo Mainnet added');
                         } else {
                             throw switchError;
                         }
                     }
-                    
-                    // Recréer le provider après le changement de réseau
-                    provider = new ethers.providers.Web3Provider(window.ethereum);
-                    signer = provider.getSigner();
+
+                    // Recreate provider after network switch
+                    gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
                 }
 
-                // Vérifier la balance
-                const balance = await provider.getBalance(userAddress);
+                // Check CELO balance
+                const balance = await gameState.provider.getBalance(gameState.address);
                 const balanceInCelo = parseFloat(ethers.utils.formatEther(balance));
-                console.log('💰 CELO balance:', balanceInCelo);
+                console.log('💰 CELO balance:', balanceInCelo.toFixed(4), 'CELO');
 
-                if (balanceInCelo < 0.01) {
-                    const faucetMsg = USE_TESTNET 
-                        ? '⚠️ Low balance. Get free CELO from faucet.celo.org' 
-                        : '⚠️ Low balance. You need CELO to play';
-                    showMessage(faucetMsg, 'warning');
+                if (balanceInCelo < 0.001) {
+                    setStatus('⚠️ Low CELO balance. You need CELO to play on-chain.', 'lose');
+                    console.warn('⚠️ Insufficient balance for transactions');
                 }
 
-                // Créer l'instance du contrat
-                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                console.log('✅ Contract instance created');
+                // Create contract instance
+                const signer = gameState.provider.getSigner();
+                gameState.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                console.log('✅ Contract connected:', CONTRACT_ADDRESS);
 
-                walletConnected = true;
+                // Check for active game
+                try {
+                    const activeGame = await gameState.contract.activeGames(gameState.address);
+                    const status = parseInt(activeGame.status.toString());
+                    
+                    if (status === 0) {
+                        console.log('⚠️ Active game detected');
+                        setStatus('⚠️ You have an active game. Click Start to continue or Reset.', 'lose');
+                    }
+                } catch (e) {
+                    console.log('ℹ️ No active game');
+                }
 
                 // Update UI
-                walletLabel.textContent = walletName + ' ✓';
-                document.getElementById('walletAddress').textContent = 
-                    userAddress.substring(0, 8) + '...' + userAddress.substring(36);
-                document.getElementById('walletAddress').style.display = 'block';
-                connectBtn.style.display = 'none';
+                gameState.connected = true;
+                elements.walletLabel.textContent = '🟣 Farcaster Wallet Connected';
+                elements.walletAddress.textContent = 
+                    gameState.address.slice(0, 6) + '...' + gameState.address.slice(-4);
+                elements.walletAddress.style.display = 'block';
+                elements.connectBtn.style.display = 'none';
 
-                await loadOnChainStats();
-                await loadLeaderboard();
-
-                showMessage(`🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`, 'win');
+                setStatus(`🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`, 'win');
 
             } catch (error) {
-                console.error('❌ Connection error:', error);
+                console.error('❌ Wallet connection error:', error);
                 
                 let errorMsg = 'Connection failed';
-                
-                if (error.message) {
-                    if (error.message.includes('User rejected') || error.message.includes('user rejected')) {
-                        errorMsg = 'Connection rejected';
-                    } else if (error.message.includes('No wallet')) {
-                        errorMsg = 'No wallet found';
-                    } else {
-                        errorMsg = error.message.substring(0, 60);
-                    }
+                if (error.message.includes('rejected') || error.message.includes('denied')) {
+                    errorMsg = 'Connection rejected by user';
+                } else if (error.message.includes('No wallet')) {
+                    errorMsg = error.message;
+                } else if (error.code === 4001) {
+                    errorMsg = 'User rejected the connection';
                 }
                 
-                showMessage(errorMsg + ' 😞', 'lose');
-                walletLabel.textContent = 'Not connected';
-                connectBtn.textContent = 'Retry';
-                connectBtn.disabled = false;
+                setStatus(errorMsg + ' 😞', 'lose');
+                elements.connectBtn.textContent = 'Retry Connection';
+                elements.connectBtn.disabled = false;
             } finally {
-                isProcessing = false;
+                gameState.processing = false;
             }
-        };
+        }
 
-        window.startGame = async function() {
-            if (isProcessing) return;
-            
-            if (currentMode === 'chain' && !walletConnected) {
-                showMessage('Please connect wallet first! 👛', 'warning');
+        // ============================================
+        // GAME LOGIC
+        // ============================================
+        async function startGame() {
+            if (gameState.processing || gameState.active) return;
+
+            if (gameState.mode === 'chain' && !gameState.connected) {
+                setStatus('Please connect your Farcaster wallet first! 👛', 'lose');
                 return;
             }
 
-            isProcessing = true;
-            const startBtn = document.getElementById('startBtn');
-            const originalText = startBtn.textContent;
-            
+            gameState.processing = true;
+            const originalText = elements.startBtn.textContent;
+
             try {
-                if (currentMode === 'chain') {
-                    // Vérifier balance
-                    const balance = await provider.getBalance(userAddress);
-                    const balanceInCelo = parseFloat(ethers.utils.formatEther(balance));
-                    
-                    if (balanceInCelo < 0.01) {
-                        const msg = USE_TESTNET 
-                            ? 'Need at least 0.01 CELO. Get free CELO from faucet.celo.org' 
-                            : 'Need at least 0.01 CELO for gas';
-                        throw new Error(msg);
-                    }
-                    
-                    // Vérifier partie active
+                if (gameState.mode === 'chain') {
+                    setStatus('Starting game on Celo Mainnet... ⏳');
+                    elements.startBtn.textContent = 'Starting...';
+
+                    // Check for active game and forfeit if exists
                     try {
-                        const activeGame = await contract.activeGames(userAddress);
-                        const gameStatus = parseInt(activeGame.status.toString());
+                        const activeGame = await gameState.contract.activeGames(gameState.address);
+                        const status = parseInt(activeGame.status.toString());
                         
-                        if (gameStatus === 0) {
-                            console.log('🏳️ Active game found, forfeiting...');
-                            showMessage('Resetting active game... 🔄');
-                            startBtn.textContent = 'Resetting...';
+                        if (status === 0) {
+                            console.log('🏳️ Forfeiting active game...');
+                            setStatus('Resetting previous game... 🔄');
                             
-                            const forfeitTx = await contract.forfeitGame({
+                            const forfeitTx = await gameState.contract.forfeitGame({
                                 gasLimit: 300000
                             });
-                            
                             await forfeitTx.wait();
-                            console.log('✅ Game forfeited');
-                            await new Promise(resolve => setTimeout(resolve, 2000));
+                            console.log('✅ Previous game forfeited');
+                            
+                            await new Promise(r => setTimeout(r, 2000));
                         }
-                    } catch (checkError) {
-                        console.log('No active game');
-                    }
-                    
-                    showMessage('Starting new game... ⏳');
-                    startBtn.textContent = 'Starting...';
-                    
-                    // Estimer le gas
-                    let gasLimit = 500000;
-                    try {
-                        const gasEstimate = await contract.estimateGas.startGame();
-                        gasLimit = gasEstimate.mul(120).div(100).toNumber(); // +20%
-                        console.log('Gas estimate:', gasLimit);
                     } catch (e) {
-                        console.log('Using default gas:', gasLimit);
+                        console.log('ℹ️ No active game to forfeit');
                     }
+
+                    // Start new game
+                    const gasEstimate = await gameState.contract.estimateGas.startGame()
+                        .catch(() => ethers.BigNumber.from('500000'));
                     
-                    const tx = await contract.startGame({ gasLimit });
-                    console.log('📤 Start game tx:', tx.hash);
+                    const gasLimit = gasEstimate.mul(120).div(100); // +20% safety margin
                     
-                    showMessage('Confirming transaction... ⏳');
-                    startBtn.textContent = 'Confirming...';
+                    const tx = await gameState.contract.startGame({ gasLimit });
+                    console.log('📤 Transaction sent:', tx.hash);
+                    
+                    setStatus('Confirming transaction on Celo... ⏳');
+                    elements.startBtn.textContent = 'Confirming...';
                     
                     const receipt = await tx.wait();
                     console.log('✅ Game started! Block:', receipt.blockNumber);
+                    console.log('⛽ Gas used:', receipt.gasUsed.toString());
                 }
 
-                gameActive = true;
-                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-                currentTurn = 1;
+                // Reset board
+                gameState.board = [0,0,0,0,0,0,0,0,0];
+                gameState.active = true;
+                updateBoard();
                 
-                updateBoardDisplay();
-                document.getElementById('startBtn').disabled = true;
-                document.getElementById('resetBtn').disabled = false;
-                showMessage('Your turn! Tap a cell 👆');
-                
-                if (currentMode === 'chain') {
-                    setTimeout(async () => {
-                        await loadOnChainStats();
-                        await loadLeaderboard();
-                    }, 2000);
-                }
+                setStatus('Your turn! Tap a cell 👆');
+                elements.startBtn.disabled = true;
+                elements.resetBtn.disabled = false;
+
             } catch (error) {
                 console.error('❌ Start game error:', error);
                 
                 let errorMsg = 'Failed to start game';
-                
                 if (error.message) {
-                    if (error.message.includes('user rejected') || error.message.includes('User rejected')) {
-                        errorMsg = 'Transaction cancelled';
-                    } else if (error.message.includes('Need at least')) {
-                        errorMsg = error.message;
+                    if (error.message.includes('rejected') || error.message.includes('denied')) {
+                        errorMsg = 'Transaction rejected by user';
+                    } else if (error.message.includes('insufficient funds')) {
+                        errorMsg = 'Insufficient CELO for gas fees';
                     } else {
                         errorMsg = error.message.substring(0, 80);
                     }
                 }
                 
-                showMessage(errorMsg + ' 😞', 'lose');
+                setStatus(errorMsg + ' 😞', 'lose');
             } finally {
-                isProcessing = false;
-                startBtn.textContent = originalText;
+                gameState.processing = false;
+                elements.startBtn.textContent = originalText;
             }
-        };
+        }
 
-        window.makeMove = async function(position) {
-            if (!gameActive || currentTurn !== 1 || board[position] !== 0 || isProcessing) {
+        async function handleMove(position) {
+            if (!gameState.active || gameState.board[position] !== 0 || gameState.processing) {
                 return;
             }
 
-            isProcessing = true;
-            
+            gameState.processing = true;
+
             try {
-                if (currentMode === 'chain') {
-                    showMessage('Making your move... ⏳');
+                if (gameState.mode === 'chain') {
+                    setStatus('Making your move on Celo... ⏳');
+
+                    const gasEstimate = await gameState.contract.estimateGas.makeMove(position)
+                        .catch(() => ethers.BigNumber.from('500000'));
                     
-                    const tx = await contract.makeMove(position, {
-                        gasLimit: 500000
-                    });
+                    const gasLimit = gasEstimate.mul(120).div(100);
                     
-                    console.log('📤 Move tx:', tx.hash);
-                    showMessage('Waiting for AI response... 🤖');
+                    const tx = await gameState.contract.makeMove(position, { gasLimit });
+                    console.log('📤 Move transaction:', tx.hash);
                     
+                    setStatus('Waiting for AI response... 🤖');
                     await tx.wait();
-                    console.log('✅ Move confirmed');
-                    
-                    // Récupérer plateau
-                    const contractBoard = await contract.getBoard(userAddress);
-                    board = contractBoard.map(cell => {
-                        if (typeof cell === 'number') return cell;
-                        if (cell.toNumber) return cell.toNumber();
-                        return parseInt(cell.toString());
-                    });
-                    updateBoardDisplay();
-                    
-                    // Vérifier fin de partie
+
+                    // Get updated board from contract
+                    const contractBoard = await gameState.contract.getBoard(gameState.address);
+                    gameState.board = contractBoard.map(c => parseInt(c.toString()));
+                    updateBoard();
+
+                    // Check game end
                     if (checkWin(1)) {
-                        showMessage('🎉 You Win!', 'win');
-                        gameActive = false;
-                        document.getElementById('startBtn').disabled = false;
-                        setTimeout(async () => {
-                            await loadOnChainStats();
-                            await loadLeaderboard();
-                        }, 2000);
+                        endGame('win');
                     } else if (checkWin(2)) {
-                        showMessage('😢 AI Wins!', 'lose');
-                        gameActive = false;
-                        document.getElementById('startBtn').disabled = false;
-                        setTimeout(async () => {
-                            await loadOnChainStats();
-                            await loadLeaderboard();
-                        }, 2000);
-                    } else if (board.every(cell => cell !== 0)) {
-                        showMessage('🤝 Draw!', 'draw');
-                        gameActive = false;
-                        document.getElementById('startBtn').disabled = false;
-                        setTimeout(async () => {
-                            await loadOnChainStats();
-                            await loadLeaderboard();
-                        }, 2000);
+                        endGame('lose');
+                    } else if (gameState.board.every(c => c !== 0)) {
+                        endGame('draw');
                     } else {
-                        showMessage('Your turn! 👆');
+                        setStatus('Your turn! 👆');
                     }
+
                 } else {
-                    // Free play
-                    board[position] = 1;
-                    updateBoardDisplay();
+                    // Free play mode
+                    gameState.board[position] = 1;
+                    updateBoard();
 
                     if (checkWin(1)) {
                         endGame('win');
-                        isProcessing = false;
+                        gameState.processing = false;
                         return;
                     }
 
-                    if (board.every(cell => cell !== 0)) {
+                    if (gameState.board.every(c => c !== 0)) {
                         endGame('draw');
-                        isProcessing = false;
+                        gameState.processing = false;
                         return;
                     }
 
-                    currentTurn = 2;
-                    showMessage('AI thinking... 🤔');
-                    
+                    setStatus('AI thinking... 🤔');
+
                     setTimeout(() => {
-                        makeAIMove();
-                        isProcessing = false;
+                        const aiMove = getAIMove();
+                        gameState.board[aiMove] = 2;
+                        updateBoard();
+
+                        if (checkWin(2)) {
+                            endGame('lose');
+                        } else if (gameState.board.every(c => c !== 0)) {
+                            endGame('draw');
+                        } else {
+                            setStatus('Your turn! 👆');
+                        }
+                        
+                        gameState.processing = false;
                     }, 600);
                     return;
                 }
+
             } catch (error) {
                 console.error('❌ Move error:', error);
                 
                 let errorMsg = 'Move failed';
-                if (error.message && error.message.includes('user rejected')) {
+                if (error.message && error.message.includes('rejected')) {
                     errorMsg = 'Transaction cancelled';
-                } else if (error.message) {
-                    errorMsg = error.message.substring(0, 60);
                 }
                 
-                showMessage(errorMsg + ' 😞', 'lose');
+                setStatus(errorMsg + ' 😞', 'lose');
             } finally {
-                if (currentMode === 'chain') {
-                    isProcessing = false;
+                if (gameState.mode === 'chain') {
+                    gameState.processing = false;
                 }
             }
-        };
-
-        function makeAIMove() {
-            let move = findWinningMove(2);
-            if (move === -1) move = findWinningMove(1);
-            if (move === -1 && board[4] === 0) move = 4;
-            if (move === -1) {
-                const corners = [0, 2, 6, 8];
-                for (let corner of corners) {
-                    if (board[corner] === 0) {
-                        move = corner;
-                        break;
-                    }
-                }
-            }
-            if (move === -1) {
-                for (let i = 0; i < 9; i++) {
-                    if (board[i] === 0) {
-                        move = i;
-                        break;
-                    }
-                }
-            }
-
-            board[move] = 2;
-            updateBoardDisplay();
-
-            if (checkWin(2)) {
-                endGame('lose');
-                return;
-            }
-
-            if (board.every(cell => cell !== 0)) {
-                endGame('draw');
-                return;
-            }
-
-            currentTurn = 1;
-            showMessage('Your turn! 👆');
         }
 
-        function findWinningMove(player) {
+        // ============================================
+        // AI LOGIC
+        // ============================================
+        function getAIMove() {
+            // Try to win
             for (let i = 0; i < 9; i++) {
-                if (board[i] === 0) {
-                    board[i] = player;
-                    if (checkWin(player)) {
-                        board[i] = 0;
+                if (gameState.board[i] === 0) {
+                    gameState.board[i] = 2;
+                    if (checkWin(2)) {
+                        gameState.board[i] = 0;
                         return i;
                     }
-                    board[i] = 0;
+                    gameState.board[i] = 0;
                 }
             }
-            return -1;
+
+            // Block player
+            for (let i = 0; i < 9; i++) {
+                if (gameState.board[i] === 0) {
+                    gameState.board[i] = 1;
+                    if (checkWin(1)) {
+                        gameState.board[i] = 0;
+                        return i;
+                    }
+                    gameState.board[i] = 0;
+                }
+            }
+
+            // Take center
+            if (gameState.board[4] === 0) return 4;
+
+            // Take corner
+            const corners = [0, 2, 6, 8];
+            for (let c of corners) {
+                if (gameState.board[c] === 0) return c;
+            }
+
+            // Take any
+            for (let i = 0; i < 9; i++) {
+                if (gameState.board[i] === 0) return i;
+            }
+
+            return 0;
         }
 
         function checkWin(player) {
             const lines = [
-                [0, 1, 2], [3, 4, 5], [6, 7, 8],
-                [0, 3, 6], [1, 4, 7], [2, 5, 8],
-                [0, 4, 8], [2, 4, 6]
+                [0,1,2], [3,4,5], [6,7,8],
+                [0,3,6], [1,4,7], [2,5,8],
+                [0,4,8], [2,4,6]
             ];
-            return lines.some(line => line.every(index => board[index] === player));
+            return lines.some(line => line.every(i => gameState.board[i] === player));
         }
 
         function endGame(result) {
-            gameActive = false;
-            
-            if (currentMode === 'free') {
-                localStats.gamesPlayed++;
+            gameState.active = false;
+            elements.startBtn.disabled = false;
+
+            if (gameState.mode === 'free') {
+                gameState.stats.games++;
                 
                 if (result === 'win') {
-                    localStats.wins++;
-                    localStats.currentStreak++;
-                    showMessage('🎉 Victory! You Win!', 'win');
+                    gameState.stats.wins++;
+                    setStatus('🎉 Victory!', 'win');
                 } else if (result === 'lose') {
-                    localStats.losses++;
-                    localStats.currentStreak = 0;
-                    showMessage('😢 AI Wins! Try Again', 'lose');
+                    gameState.stats.losses++;
+                    setStatus('😢 AI Wins', 'lose');
                 } else {
-                    localStats.draws++;
-                    showMessage('🤝 Draw! Well Played', 'draw');
+                    setStatus('🤝 Draw!');
                 }
                 
-                saveLocalStats();
+                localStorage.setItem('tictactoe_celo_stats', JSON.stringify(gameState.stats));
                 updateStatsDisplay();
-            }
-
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('resetBtn').disabled = false;
-        }
-
-        window.resetGame = function() {
-            if (isProcessing) return;
-            
-            if (currentMode === 'free' || !walletConnected) {
-                gameActive = false;
-                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-                currentTurn = 1;
-                updateBoardDisplay();
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('resetBtn').disabled = true;
-                showMessage('Click Start to begin! 🚀');
-                return;
-            }
-            
-            if (gameActive) {
-                if (confirm('⚠️ Abandon this game? This will count as a loss.')) {
-                    forfeitOnChainGame();
-                }
             } else {
-                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-                updateBoardDisplay();
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('resetBtn').disabled = true;
-                showMessage('Click Start to begin! 🚀');
-            }
-        };
-
-        async function forfeitOnChainGame() {
-            if (isProcessing) return;
-            isProcessing = true;
-
-            try {
-                showMessage('Abandoning game... 🏳️');
-                
-                const tx = await contract.forfeitGame({
-                    gasLimit: 300000
-                });
-                
-                await tx.wait();
-                
-                gameActive = false;
-                board = [0, 0, 0, 0, 0, 0, 0, 0, 0];
-                updateBoardDisplay();
-                document.getElementById('startBtn').disabled = false;
-                document.getElementById('resetBtn').disabled = true;
-                
-                showMessage('Game abandoned. Ready! 🆕');
-                
-                await loadOnChainStats();
-                await loadLeaderboard();
-            } catch (error) {
-                console.error('Forfeit error:', error);
-                showMessage('Failed to abandon 😞', 'lose');
-            } finally {
-                isProcessing = false;
+                if (result === 'win') setStatus('🎉 You Win!', 'win');
+                else if (result === 'lose') setStatus('😢 AI Wins', 'lose');
+                else setStatus('🤝 Draw!');
             }
         }
 
-        function updateBoardDisplay() {
-            const cells = document.querySelectorAll('.cell');
-            cells.forEach((cell, index) => {
-                cell.classList.remove('filled', 'x', 'o');
-                if (board[index] === 1) {
-                    cell.textContent = 'X';
-                    cell.classList.add('filled', 'x');
-                } else if (board[index] === 2) {
-                    cell.textContent = 'O';
-                    cell.classList.add('filled', 'o');
-                } else {
-                    cell.textContent = '';
-                }
-            });
+        function resetGame() {
+            if (gameState.processing) return;
+            
+            gameState.board = [0,0,0,0,0,0,0,0,0];
+            gameState.active = false;
+            updateBoard();
+            setStatus('Click Start to begin! 🚀');
+            elements.startBtn.disabled = false;
+            elements.resetBtn.disabled = true;
         }
 
-        function showMessage(message, type = '') {
-            const banner = document.getElementById('statusBanner');
-            banner.textContent = message;
-            banner.className = 'status-banner ' + type;
+        // ============================================
+        // UI HELPERS
+        // ============================================
+        function switchMode(mode) {
+            gameState.mode = mode;
+            elements.freeBtn.classList.toggle('active', mode === 'free');
+            elements.chainBtn.classList.toggle('active', mode === 'chain');
+            elements.walletCard.classList.toggle('show', mode === 'chain');
+            resetGame();
         }
 
-        async function loadOnChainStats() {
-            if (!contract || !userAddress) return;
-
-            try {
-                const stats = await contract.getPlayerStats(userAddress);
-                
-                document.getElementById('statGames').textContent = stats[0].toString();
-                document.getElementById('statWins').textContent = stats[1].toString();
-                document.getElementById('statLosses').textContent = stats[2].toString();
-                document.getElementById('statDraws').textContent = stats[3].toString();
-                document.getElementById('statWinRate').textContent = 
-                    (stats[4].toNumber() / 100).toFixed(1) + '%';
-                document.getElementById('statStreak').textContent = stats[5].toString();
-            } catch (error) {
-                console.error('Load stats error:', error);
+        function updateBoard() {
+            const cells = elements.board.children;
+            for (let i = 0; i < 9; i++) {
+                const value = gameState.board[i];
+                cells[i].textContent = value === 1 ? 'X' : value === 2 ? 'O' : '';
+                cells[i].className = 'cell' +
+                    (value !== 0 ? ' filled' : '') +
+                    (value === 1 ? ' x' : value === 2 ? ' o' : '');
             }
         }
 
-        async function loadLeaderboard() {
-            if (!contract) return;
-
-            const content = document.getElementById('leaderboardContent');
-            content.innerHTML = '<div class="loading"><div class="spinner"></div>Loading...</div>';
-
-            try {
-                const leaderboard = await contract.getLeaderboard();
-
-                if (leaderboard.length === 0) {
-                    content.innerHTML = '<div class="loading">No players yet! 🎮<br>Be the first!</div>';
-                    return;
-                }
-
-                let html = '';
-                const medals = ['🥇', '🥈', '🥉'];
-                
-                leaderboard.slice(0, 10).forEach((entry, index) => {
-                    const addr = entry.player.substring(0, 6) + '...' + entry.player.substring(38);
-                    const winRate = (entry.winRate.toNumber() / 100).toFixed(1) + '%';
-                    const rankClass = index < 3 ? 'top3' : '';
-                    const medal = index < 3 ? medals[index] : `#${index + 1}`;
-                    
-                    html += `
-                        <div class="leaderboard-item">
-                            <div class="leaderboard-rank ${rankClass}">${medal}</div>
-                            <div class="leaderboard-info">
-                                <div class="leaderboard-address">${addr}</div>
-                                <div class="leaderboard-stats">${winRate} WR · 🔥 ${entry.bestStreak}</div>
-                            </div>
-                            <div class="leaderboard-wins">${entry.wins} 🏆</div>
-                        </div>
-                    `;
-                });
-
-                content.innerHTML = html;
-            } catch (error) {
-                console.error('Load leaderboard error:', error);
-                content.innerHTML = '<div class="loading">Failed to load 😞</div>';
-            }
-        }
-
-        function loadLocalStats() {
-            const saved = localStorage.getItem('tictactoe_stats');
-            if (saved) {
-                localStats = JSON.parse(saved);
-            }
-        }
-
-        function saveLocalStats() {
-            localStorage.setItem('tictactoe_stats', JSON.stringify(localStats));
+        function setStatus(msg, type = '') {
+            elements.status.textContent = msg;
+            elements.status.className = 'status ' + type;
         }
 
         function updateStatsDisplay() {
-            if (currentMode === 'free') {
-                document.getElementById('statGames').textContent = localStats.gamesPlayed;
-                document.getElementById('statWins').textContent = localStats.wins;
-                document.getElementById('statLosses').textContent = localStats.losses;
-                document.getElementById('statDraws').textContent = localStats.draws;
-                
-                const winRate = localStats.gamesPlayed > 0 
-                    ? ((localStats.wins / localStats.gamesPlayed) * 100).toFixed(1)
-                    : 0;
-                document.getElementById('statWinRate').textContent = winRate + '%';
-                document.getElementById('statStreak').textContent = localStats.currentStreak;
-            }
+            document.getElementById('statGames').textContent = gameState.stats.games;
+            document.getElementById('statWins').textContent = gameState.stats.wins;
+            document.getElementById('statLosses').textContent = gameState.stats.losses;
         }
 
-        window.addEventListener('load', init);
-
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        
+        // Listen for account changes
         if (window.ethereum) {
             window.ethereum.on('accountsChanged', (accounts) => {
-                if (accounts.length === 0 || accounts[0] !== userAddress) {
-                    location.reload();
+                if (accounts.length === 0) {
+                    console.log('👛 Wallet disconnected');
+                    gameState.connected = false;
+                    gameState.address = null;
+                    elements.walletLabel.textContent = 'Wallet disconnected';
+                    elements.walletAddress.style.display = 'none';
+                    elements.connectBtn.style.display = 'block';
+                    elements.connectBtn.disabled = false;
+                    resetGame();
+                } else if (accounts[0] !== gameState.address) {
+                    console.log('👛 Account changed, reloading...');
+                    window.location.reload();
                 }
             });
 
-            window.ethereum.on('chainChanged', () => {
-                location.reload();
+            window.ethereum.on('chainChanged', (chainId) => {
+                console.log('🌐 Network changed:', chainId);
+                window.location.reload();
             });
         }
+
+        // ============================================
+        // START APPLICATION
+        // ============================================
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        console.log('🎮 Tic Tac Toe on Celo Mainnet - Ready!');
     </script>
 </body>
 </html>
