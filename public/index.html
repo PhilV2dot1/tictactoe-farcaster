@@ -267,7 +267,7 @@
         <div class="header">
             <div class="logo">🎮</div>
             <h1 class="title">Tic Tac Toe</h1>
-            <span class="network-badge">Celo Mainnet</span>
+            <span class="network-badge" id="networkBadge">Celo Mainnet</span>
         </div>
 
         <div class="mode-toggle">
@@ -349,22 +349,44 @@
 
     <script>
         // ============================================
-        // CONFIGURATION CELO MAINNET (Production)
+        // CONFIGURATION CELO
         // ============================================
+        
+        // ⚠️ IMPORTANT: Le contrat 0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008 
+        // est déployé sur Celo MAINNET
+        // Mettez USE_TESTNET à false pour utiliser Mainnet
+        
+        const USE_TESTNET = false; // ✅ MAINNET pour production
+        
         const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
         
         const CELO_MAINNET = {
             chainId: 42220,
             chainIdHex: '0xa4ec',
-            name: 'Celo Mainnet',
+            name: 'Celo',
             nativeCurrency: {
                 name: 'CELO',
                 symbol: 'CELO',
                 decimals: 18
             },
             rpcUrls: ['https://forno.celo.org'],
-            blockExplorerUrls: ['https://explorer.celo.org']
+            blockExplorerUrls: ['https://explorer.celo.org/mainnet']
         };
+
+        const CELO_ALFAJORES = {
+            chainId: 44787,
+            chainIdHex: '0xaef3',
+            name: 'Celo Alfajores Testnet',
+            nativeCurrency: {
+                name: 'CELO',
+                symbol: 'CELO',
+                decimals: 18
+            },
+            rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
+            blockExplorerUrls: ['https://alfajores.celoscan.io']
+        };
+
+        const CURRENT_NETWORK = USE_TESTNET ? CELO_ALFAJORES : CELO_MAINNET;
 
         const CONTRACT_ABI = [
             "function startGame() external",
@@ -410,7 +432,10 @@
         // INITIALIZATION
         // ============================================
         function init() {
-            console.log('🎮 Initializing Tic Tac Toe on Celo Mainnet...');
+            console.log(`🎮 Initializing Tic Tac Toe on ${CURRENT_NETWORK.name}...`);
+            
+            // Update network badge
+            document.getElementById('networkBadge').textContent = CURRENT_NETWORK.name;
             
             // Create board cells
             for (let i = 0; i < 9; i++) {
@@ -435,7 +460,19 @@
                 updateStatsDisplay();
             }
 
-            console.log('✅ App initialized on Celo Mainnet');
+            console.log('✅ App initialized on', CURRENT_NETWORK.name);
+            console.log(`📍 Network: ${CURRENT_NETWORK.name} (Chain ID: ${CURRENT_NETWORK.chainId})`);
+            console.log(`📝 Contract: ${CONTRACT_ADDRESS}`);
+            console.log(`🔗 Explorer: ${CURRENT_NETWORK.blockExplorerUrls[0]}/address/${CONTRACT_ADDRESS}`);
+            
+            // Afficher un avertissement si testnet
+            if (USE_TESTNET) {
+                console.log('⚠️ TESTNET MODE: Using Alfajores testnet');
+                console.log('💰 Get free CELO: https://faucet.celo.org');
+            } else {
+                console.log('🌐 MAINNET MODE: Using Celo production network');
+                console.log('💰 You need real CELO to play on-chain');
+            }
         }
 
         // ============================================
@@ -477,26 +514,26 @@
                 const network = await gameState.provider.getNetwork();
                 console.log('🌐 Current network:', network.chainId, network.name);
 
-                // Switch to Celo Mainnet if needed
-                if (network.chainId !== CELO_MAINNET.chainId) {
-                    console.log('⚠️ Wrong network, switching to Celo Mainnet...');
-                    setStatus('Switching to Celo Mainnet... 🔄');
+                // Switch to correct Celo network if needed
+                if (network.chainId !== CURRENT_NETWORK.chainId) {
+                    console.log(`⚠️ Wrong network, switching to ${CURRENT_NETWORK.name}...`);
+                    setStatus(`Switching to ${CURRENT_NETWORK.name}... 🔄`);
 
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: CELO_MAINNET.chainIdHex }]
+                            params: [{ chainId: CURRENT_NETWORK.chainIdHex }]
                         });
-                        console.log('✅ Switched to Celo Mainnet');
+                        console.log(`✅ Switched to ${CURRENT_NETWORK.name}`);
                     } catch (switchError) {
                         // Network doesn't exist, add it
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            console.log('➕ Adding Celo Mainnet to wallet...');
+                            console.log(`➕ Adding ${CURRENT_NETWORK.name} to wallet...`);
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
-                                params: [CELO_MAINNET]
+                                params: [CURRENT_NETWORK]
                             });
-                            console.log('✅ Celo Mainnet added');
+                            console.log(`✅ ${CURRENT_NETWORK.name} added`);
                         } else {
                             throw switchError;
                         }
@@ -512,26 +549,30 @@
                 console.log('💰 CELO balance:', balanceInCelo.toFixed(4), 'CELO');
 
                 if (balanceInCelo < 0.001) {
-                    setStatus('⚠️ Low CELO balance. You need CELO to play on-chain.', 'lose');
+                    const warningMsg = USE_TESTNET 
+                        ? '⚠️ Low CELO. Get free testnet CELO from faucet.celo.org'
+                        : '⚠️ Low CELO balance. You need CELO to play on-chain.';
+                    setStatus(warningMsg, 'lose');
                     console.warn('⚠️ Insufficient balance for transactions');
+                } else {
+                    const successMsg = `🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`;
+                    setStatus(successMsg, 'win');
                 }
 
                 // Create contract instance
                 const signer = gameState.provider.getSigner();
                 gameState.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
                 console.log('✅ Contract connected:', CONTRACT_ADDRESS);
+                console.log(`📍 Network: ${CURRENT_NETWORK.name}`);
+                console.log(`🔗 Explorer: ${CURRENT_NETWORK.blockExplorerUrls[0]}/address/${CONTRACT_ADDRESS}`);
 
-                // Check for active game
+                // Vérifier que le contrat existe en essayant d'appeler une fonction view
                 try {
-                    const activeGame = await gameState.contract.activeGames(gameState.address);
-                    const status = parseInt(activeGame.status.toString());
-                    
-                    if (status === 0) {
-                        console.log('⚠️ Active game detected');
-                        setStatus('⚠️ You have an active game. Click Start to continue or Reset.', 'lose');
-                    }
-                } catch (e) {
-                    console.log('ℹ️ No active game');
+                    const testCall = await gameState.contract.activeGames(gameState.address);
+                    console.log('✅ Contract is valid and deployed');
+                } catch (contractError) {
+                    console.error('❌ Contract verification failed:', contractError);
+                    throw new Error(`Contract not found at ${CONTRACT_ADDRESS} on ${CURRENT_NETWORK.name}. Please verify the contract address or deploy the contract first.`);
                 }
 
                 // Update UI
@@ -542,7 +583,9 @@
                 elements.walletAddress.style.display = 'block';
                 elements.connectBtn.style.display = 'none';
 
-                setStatus(`🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`, 'win');
+                if (balanceInCelo >= 0.001) {
+                    setStatus(`🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`, 'win');
+                }
 
             } catch (error) {
                 console.error('❌ Wallet connection error:', error);
@@ -580,7 +623,7 @@
 
             try {
                 if (gameState.mode === 'chain') {
-                    setStatus('Starting game on Celo Mainnet... ⏳');
+                    setStatus(`Starting game on ${CURRENT_NETWORK.name}... ⏳`);
                     elements.startBtn.textContent = 'Starting...';
 
                     // Check for active game and forfeit if exists
