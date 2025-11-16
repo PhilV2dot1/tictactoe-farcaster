@@ -236,8 +236,14 @@
 
         .stats-grid {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(2, 1fr);
             gap: 12px;
+        }
+
+        @media (min-width: 400px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
         }
 
         .stat-card {
@@ -321,6 +327,10 @@
                     <div class="stat-value" id="statLosses">0</div>
                     <div class="stat-label">Losses</div>
                 </div>
+                <div class="stat-card">
+                    <div class="stat-value" id="statDraws">0</div>
+                    <div class="stat-label">Draws</div>
+                </div>
             </div>
         </div>
     </div>
@@ -389,7 +399,7 @@
             active: false,
             processing: false,
             gameStartedOnChain: false,
-            stats: { games: 0, wins: 0, losses: 0 }
+            stats: { games: 0, wins: 0, losses: 0, draws: 0 }
         };
 
         // ============================================
@@ -723,6 +733,7 @@
                     gameState.stats.losses++;
                     setStatus('😢 AI Wins', 'lose');
                 } else {
+                    gameState.stats.draws++;
                     setStatus('🤝 Draw!');
                 }
                 
@@ -807,11 +818,13 @@
                 document.getElementById('statGames').textContent = stats[0].toString();
                 document.getElementById('statWins').textContent = stats[1].toString();
                 document.getElementById('statLosses').textContent = stats[2].toString();
+                document.getElementById('statDraws').textContent = stats[3].toString();
                 
                 console.log('✅ On-chain stats loaded:', {
                     games: stats[0].toString(),
                     wins: stats[1].toString(),
-                    losses: stats[2].toString()
+                    losses: stats[2].toString(),
+                    draws: stats[3].toString()
                 });
             } catch (error) {
                 console.error('❌ Failed to load stats:', error);
@@ -856,6 +869,7 @@
             document.getElementById('statGames').textContent = gameState.stats.games;
             document.getElementById('statWins').textContent = gameState.stats.wins;
             document.getElementById('statLosses').textContent = gameState.stats.losses;
+            document.getElementById('statDraws').textContent = gameState.stats.draws;
         }
 
         // ============================================
