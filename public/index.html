@@ -267,7 +267,7 @@
         <div class="header">
             <div class="logo">🎮</div>
             <h1 class="title">Tic Tac Toe</h1>
-            <span class="network-badge" id="networkBadge">Celo Mainnet</span>
+            <span class="network-badge">Celo Mainnet</span>
         </div>
 
         <div class="mode-toggle">
@@ -329,13 +329,10 @@
     <script type="module">
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
         
-        // CRITICAL: Call ready immediately to remove splash screen
         sdk.actions.ready({});
-        
         window.farcasterSDK = sdk;
         console.log('✅ Farcaster SDK ready');
         
-        // Get Farcaster context
         sdk.context.then(context => {
             window.farcasterContext = context;
             console.log('📱 Farcaster context:', context);
@@ -344,21 +341,16 @@
         });
     </script>
 
-    <!-- Ethers.js for Celo -->
+    <!-- Ethers.js -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
 
     <script>
         // ============================================
-        // CONFIGURATION CELO
+        // CONFIGURATION
         // ============================================
         
-        // ⚠️ IMPORTANT: Le contrat 0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008 
-        // est déployé sur Celo MAINNET
-        // Mettez USE_TESTNET à false pour utiliser Mainnet
-        
-        const USE_TESTNET = false; // ✅ MAINNET pour production
-        
-        const CONTRACT_ADDRESS = "0xD92BcD223Aa2A9818CbeB853b1d2beAa9eaf3008";
+        // Nouveau contrat simple (pas de fonds, juste tracking)
+        const CONTRACT_ADDRESS = "0xa9596b4a5A7F0E10A5666a3a5106c4F2C3838881";
         
         const CELO_MAINNET = {
             chainId: 42220,
@@ -373,32 +365,19 @@
             blockExplorerUrls: ['https://explorer.celo.org/mainnet']
         };
 
-        const CELO_ALFAJORES = {
-            chainId: 44787,
-            chainIdHex: '0xaef3',
-            name: 'Celo Alfajores Testnet',
-            nativeCurrency: {
-                name: 'CELO',
-                symbol: 'CELO',
-                decimals: 18
-            },
-            rpcUrls: ['https://alfajores-forno.celo-testnet.org'],
-            blockExplorerUrls: ['https://alfajores.celoscan.io']
-        };
-
-        const CURRENT_NETWORK = USE_TESTNET ? CELO_ALFAJORES : CELO_MAINNET;
-
+        // ABI simplifié pour le nouveau contrat
         const CONTRACT_ABI = [
             "function startGame() external",
-            "function makeMove(uint8 position) external",
-            "function forfeitGame() external",
-            "function getBoard(address player) external view returns (uint8[9])",
-            "function getPlayerStats(address player) external view returns (uint256,uint256,uint256,uint256,uint256,uint256,uint256,uint256)",
-            "function activeGames(address) external view returns (address player, uint8[9] board, uint8 currentTurn, uint8 status, uint256 startTime, uint256 endTime, uint8 moveCount)"
+            "function endGame(uint8 result) external",
+            "function getPlayerStats(address player) external view returns (uint256 gamesPlayed, uint256 wins, uint256 losses, uint256 draws, uint256 winRate, uint256 currentStreak, uint256 bestStreak)",
+            "function getPlayerGameCount(address player) external view returns (uint256)",
+            "function totalGamesPlayed() external view returns (uint256)",
+            "event GameStarted(address indexed player, uint256 gameId, uint256 timestamp)",
+            "event GameCompleted(address indexed player, uint256 gameId, uint8 result)"
         ];
 
         // ============================================
-        // STATE MANAGEMENT
+        // STATE
         // ============================================
         let gameState = {
             mode: 'free',
@@ -409,6 +388,7 @@
             board: [0,0,0,0,0,0,0,0,0],
             active: false,
             processing: false,
+            gameStartedOnChain: false,
             stats: { games: 0, wins: 0, losses: 0 }
         };
 
@@ -432,12 +412,11 @@
         // INITIALIZATION
         // ============================================
         function init() {
-            console.log(`🎮 Initializing Tic Tac Toe on ${CURRENT_NETWORK.name}...`);
+            console.log('🎮 Initializing Tic Tac Toe on Celo...');
+            console.log('📝 Contract:', CONTRACT_ADDRESS);
+            console.log('🔗 Explorer:', CELO_MAINNET.blockExplorerUrls[0] + '/address/' + CONTRACT_ADDRESS);
             
-            // Update network badge
-            document.getElementById('networkBadge').textContent = CURRENT_NETWORK.name;
-            
-            // Create board cells
+            // Create board
             for (let i = 0; i < 9; i++) {
                 const cell = document.createElement('div');
                 cell.className = 'cell';
@@ -446,37 +425,25 @@
                 elements.board.appendChild(cell);
             }
 
-            // Event listeners
+            // Events
             elements.freeBtn.onclick = () => switchMode('free');
             elements.chainBtn.onclick = () => switchMode('chain');
             elements.connectBtn.onclick = connectWallet;
             elements.startBtn.onclick = startGame;
             elements.resetBtn.onclick = resetGame;
 
-            // Load stats from localStorage
+            // Load stats
             const saved = localStorage.getItem('tictactoe_celo_stats');
             if (saved) {
                 gameState.stats = JSON.parse(saved);
                 updateStatsDisplay();
             }
 
-            console.log('✅ App initialized on', CURRENT_NETWORK.name);
-            console.log(`📍 Network: ${CURRENT_NETWORK.name} (Chain ID: ${CURRENT_NETWORK.chainId})`);
-            console.log(`📝 Contract: ${CONTRACT_ADDRESS}`);
-            console.log(`🔗 Explorer: ${CURRENT_NETWORK.blockExplorerUrls[0]}/address/${CONTRACT_ADDRESS}`);
-            
-            // Afficher un avertissement si testnet
-            if (USE_TESTNET) {
-                console.log('⚠️ TESTNET MODE: Using Alfajores testnet');
-                console.log('💰 Get free CELO: https://faucet.celo.org');
-            } else {
-                console.log('🌐 MAINNET MODE: Using Celo production network');
-                console.log('💰 You need real CELO to play on-chain');
-            }
+            console.log('✅ App initialized');
         }
 
         // ============================================
-        // WALLET CONNECTION (Farcaster Native)
+        // WALLET CONNECTION
         // ============================================
         async function connectWallet() {
             if (gameState.processing) return;
@@ -487,92 +454,68 @@
                 elements.connectBtn.disabled = true;
                 elements.connectBtn.textContent = 'Connecting...';
 
-                // Check for Ethereum provider (injected by Farcaster)
                 if (!window.ethereum) {
-                    throw new Error('No wallet found. Please open this app in Farcaster.');
+                    throw new Error('No wallet found. Please open in Farcaster app.');
                 }
 
-                console.log('🔌 Detected wallet provider');
-                console.log('📱 Farcaster context:', window.farcasterContext);
-
-                // Request accounts (Farcaster wallet)
+                console.log('🔌 Requesting accounts...');
                 const accounts = await window.ethereum.request({
                     method: 'eth_requestAccounts'
                 });
 
                 if (!accounts || accounts.length === 0) {
-                    throw new Error('No accounts returned from wallet');
+                    throw new Error('No accounts returned');
                 }
 
                 gameState.address = accounts[0];
-                console.log('✅ Wallet connected:', gameState.address);
+                console.log('✅ Connected:', gameState.address);
 
-                // Create ethers provider
                 gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
                 
-                // Check current network
+                // Check/Switch network
                 const network = await gameState.provider.getNetwork();
-                console.log('🌐 Current network:', network.chainId, network.name);
+                console.log('🌐 Current network:', network.chainId);
 
-                // Switch to correct Celo network if needed
-                if (network.chainId !== CURRENT_NETWORK.chainId) {
-                    console.log(`⚠️ Wrong network, switching to ${CURRENT_NETWORK.name}...`);
-                    setStatus(`Switching to ${CURRENT_NETWORK.name}... 🔄`);
+                if (network.chainId !== CELO_MAINNET.chainId) {
+                    console.log('⚠️ Switching to Celo...');
+                    setStatus('Switching to Celo... 🔄');
 
                     try {
                         await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
-                            params: [{ chainId: CURRENT_NETWORK.chainIdHex }]
+                            params: [{ chainId: CELO_MAINNET.chainIdHex }]
                         });
-                        console.log(`✅ Switched to ${CURRENT_NETWORK.name}`);
                     } catch (switchError) {
-                        // Network doesn't exist, add it
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            console.log(`➕ Adding ${CURRENT_NETWORK.name} to wallet...`);
                             await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
-                                params: [CURRENT_NETWORK]
+                                params: [CELO_MAINNET]
                             });
-                            console.log(`✅ ${CURRENT_NETWORK.name} added`);
                         } else {
                             throw switchError;
                         }
                     }
 
-                    // Recreate provider after network switch
                     gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
                 }
 
-                // Check CELO balance
+                // Balance
                 const balance = await gameState.provider.getBalance(gameState.address);
                 const balanceInCelo = parseFloat(ethers.utils.formatEther(balance));
-                console.log('💰 CELO balance:', balanceInCelo.toFixed(4), 'CELO');
+                console.log('💰 Balance:', balanceInCelo.toFixed(4), 'CELO');
 
-                if (balanceInCelo < 0.001) {
-                    const warningMsg = USE_TESTNET 
-                        ? '⚠️ Low CELO. Get free testnet CELO from faucet.celo.org'
-                        : '⚠️ Low CELO balance. You need CELO to play on-chain.';
-                    setStatus(warningMsg, 'lose');
-                    console.warn('⚠️ Insufficient balance for transactions');
-                } else {
-                    const successMsg = `🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`;
-                    setStatus(successMsg, 'win');
-                }
-
-                // Create contract instance
+                // Contract
                 const signer = gameState.provider.getSigner();
                 gameState.contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
-                console.log('✅ Contract connected:', CONTRACT_ADDRESS);
-                console.log(`📍 Network: ${CURRENT_NETWORK.name}`);
-                console.log(`🔗 Explorer: ${CURRENT_NETWORK.blockExplorerUrls[0]}/address/${CONTRACT_ADDRESS}`);
+                console.log('✅ Contract connected');
 
-                // Vérifier que le contrat existe en essayant d'appeler une fonction view
+                // Test contract
                 try {
-                    const testCall = await gameState.contract.activeGames(gameState.address);
-                    console.log('✅ Contract is valid and deployed');
-                } catch (contractError) {
-                    console.error('❌ Contract verification failed:', contractError);
-                    throw new Error(`Contract not found at ${CONTRACT_ADDRESS} on ${CURRENT_NETWORK.name}. Please verify the contract address or deploy the contract first.`);
+                    const totalGames = await gameState.contract.totalGamesPlayed();
+                    console.log('✅ Contract valid. Total games:', totalGames.toString());
+                } catch (e) {
+                    console.error('❌ Contract test failed:', e);
+                    throw new Error('Contract not responding. Please verify the contract address.');
                 }
 
                 // Update UI
@@ -583,24 +526,27 @@
                 elements.walletAddress.style.display = 'block';
                 elements.connectBtn.style.display = 'none';
 
-                if (balanceInCelo >= 0.001) {
-                    setStatus(`🎉 Connected! Balance: ${balanceInCelo.toFixed(4)} CELO`, 'win');
+                // Load stats
+                await loadOnChainStats();
+
+                if (balanceInCelo < 0.01) {
+                    setStatus('⚠️ Low CELO balance. You need CELO to record games.', 'lose');
+                } else {
+                    setStatus('🎉 Connected! Ready to play on-chain', 'win');
                 }
 
             } catch (error) {
-                console.error('❌ Wallet connection error:', error);
+                console.error('❌ Connection error:', error);
                 
                 let errorMsg = 'Connection failed';
                 if (error.message.includes('rejected') || error.message.includes('denied')) {
-                    errorMsg = 'Connection rejected by user';
+                    errorMsg = 'Connection rejected';
                 } else if (error.message.includes('No wallet')) {
                     errorMsg = error.message;
-                } else if (error.code === 4001) {
-                    errorMsg = 'User rejected the connection';
                 }
                 
                 setStatus(errorMsg + ' 😞', 'lose');
-                elements.connectBtn.textContent = 'Retry Connection';
+                elements.connectBtn.textContent = 'Retry';
                 elements.connectBtn.disabled = false;
             } finally {
                 gameState.processing = false;
@@ -614,57 +560,27 @@
             if (gameState.processing || gameState.active) return;
 
             if (gameState.mode === 'chain' && !gameState.connected) {
-                setStatus('Please connect your Farcaster wallet first! 👛', 'lose');
+                setStatus('Please connect wallet first! 👛', 'lose');
                 return;
             }
 
             gameState.processing = true;
-            const originalText = elements.startBtn.textContent;
 
             try {
                 if (gameState.mode === 'chain') {
-                    setStatus(`Starting game on ${CURRENT_NETWORK.name}... ⏳`);
-                    elements.startBtn.textContent = 'Starting...';
+                    setStatus('Recording game start on blockchain... ⏳');
+                    elements.startBtn.textContent = 'Recording...';
 
-                    // Check for active game and forfeit if exists
-                    try {
-                        const activeGame = await gameState.contract.activeGames(gameState.address);
-                        const status = parseInt(activeGame.status.toString());
-                        
-                        if (status === 0) {
-                            console.log('🏳️ Forfeiting active game...');
-                            setStatus('Resetting previous game... 🔄');
-                            
-                            const forfeitTx = await gameState.contract.forfeitGame({
-                                gasLimit: 300000
-                            });
-                            await forfeitTx.wait();
-                            console.log('✅ Previous game forfeited');
-                            
-                            await new Promise(r => setTimeout(r, 2000));
-                        }
-                    } catch (e) {
-                        console.log('ℹ️ No active game to forfeit');
-                    }
-
-                    // Start new game
-                    const gasEstimate = await gameState.contract.estimateGas.startGame()
-                        .catch(() => ethers.BigNumber.from('500000'));
+                    const tx = await gameState.contract.startGame();
+                    console.log('📤 Start game tx:', tx.hash);
                     
-                    const gasLimit = gasEstimate.mul(120).div(100); // +20% safety margin
+                    await tx.wait();
+                    console.log('✅ Game recorded on-chain');
                     
-                    const tx = await gameState.contract.startGame({ gasLimit });
-                    console.log('📤 Transaction sent:', tx.hash);
-                    
-                    setStatus('Confirming transaction on Celo... ⏳');
-                    elements.startBtn.textContent = 'Confirming...';
-                    
-                    const receipt = await tx.wait();
-                    console.log('✅ Game started! Block:', receipt.blockNumber);
-                    console.log('⛽ Gas used:', receipt.gasUsed.toString());
+                    gameState.gameStartedOnChain = true;
                 }
 
-                // Reset board
+                // Reset board and start
                 gameState.board = [0,0,0,0,0,0,0,0,0];
                 gameState.active = true;
                 updateBoard();
@@ -674,23 +590,19 @@
                 elements.resetBtn.disabled = false;
 
             } catch (error) {
-                console.error('❌ Start game error:', error);
+                console.error('❌ Start error:', error);
                 
                 let errorMsg = 'Failed to start game';
-                if (error.message) {
-                    if (error.message.includes('rejected') || error.message.includes('denied')) {
-                        errorMsg = 'Transaction rejected by user';
-                    } else if (error.message.includes('insufficient funds')) {
-                        errorMsg = 'Insufficient CELO for gas fees';
-                    } else {
-                        errorMsg = error.message.substring(0, 80);
-                    }
+                if (error.message && error.message.includes('rejected')) {
+                    errorMsg = 'Transaction rejected';
+                } else if (error.message && error.message.includes('insufficient funds')) {
+                    errorMsg = 'Insufficient CELO for gas';
                 }
                 
                 setStatus(errorMsg + ' 😞', 'lose');
             } finally {
                 gameState.processing = false;
-                elements.startBtn.textContent = originalText;
+                elements.startBtn.textContent = 'Start Game';
             }
         }
 
@@ -701,88 +613,42 @@
 
             gameState.processing = true;
 
-            try {
-                if (gameState.mode === 'chain') {
-                    setStatus('Making your move on Celo... ⏳');
+            // Player move
+            gameState.board[position] = 1;
+            updateBoard();
 
-                    const gasEstimate = await gameState.contract.estimateGas.makeMove(position)
-                        .catch(() => ethers.BigNumber.from('500000'));
-                    
-                    const gasLimit = gasEstimate.mul(120).div(100);
-                    
-                    const tx = await gameState.contract.makeMove(position, { gasLimit });
-                    console.log('📤 Move transaction:', tx.hash);
-                    
-                    setStatus('Waiting for AI response... 🤖');
-                    await tx.wait();
-
-                    // Get updated board from contract
-                    const contractBoard = await gameState.contract.getBoard(gameState.address);
-                    gameState.board = contractBoard.map(c => parseInt(c.toString()));
-                    updateBoard();
-
-                    // Check game end
-                    if (checkWin(1)) {
-                        endGame('win');
-                    } else if (checkWin(2)) {
-                        endGame('lose');
-                    } else if (gameState.board.every(c => c !== 0)) {
-                        endGame('draw');
-                    } else {
-                        setStatus('Your turn! 👆');
-                    }
-
-                } else {
-                    // Free play mode
-                    gameState.board[position] = 1;
-                    updateBoard();
-
-                    if (checkWin(1)) {
-                        endGame('win');
-                        gameState.processing = false;
-                        return;
-                    }
-
-                    if (gameState.board.every(c => c !== 0)) {
-                        endGame('draw');
-                        gameState.processing = false;
-                        return;
-                    }
-
-                    setStatus('AI thinking... 🤔');
-
-                    setTimeout(() => {
-                        const aiMove = getAIMove();
-                        gameState.board[aiMove] = 2;
-                        updateBoard();
-
-                        if (checkWin(2)) {
-                            endGame('lose');
-                        } else if (gameState.board.every(c => c !== 0)) {
-                            endGame('draw');
-                        } else {
-                            setStatus('Your turn! 👆');
-                        }
-                        
-                        gameState.processing = false;
-                    }, 600);
-                    return;
-                }
-
-            } catch (error) {
-                console.error('❌ Move error:', error);
-                
-                let errorMsg = 'Move failed';
-                if (error.message && error.message.includes('rejected')) {
-                    errorMsg = 'Transaction cancelled';
-                }
-                
-                setStatus(errorMsg + ' 😞', 'lose');
-            } finally {
-                if (gameState.mode === 'chain') {
-                    gameState.processing = false;
-                }
+            // Check win
+            if (checkWin(1)) {
+                await endGame('win');
+                gameState.processing = false;
+                return;
             }
+
+            // Check draw
+            if (gameState.board.every(c => c !== 0)) {
+                await endGame('draw');
+                gameState.processing = false;
+                return;
+            }
+
+            // AI move
+            setStatus('AI thinking... 🤔');
+
+            setTimeout(async () => {
+                const aiMove = getAIMove();
+                gameState.board[aiMove] = 2;
+                updateBoard();
+
+                if (checkWin(2)) {
+                    await endGame('lose');
+                } else if (gameState.board.every(c => c !== 0)) {
+                    await endGame('draw');
+                } else {
+                    setStatus('Your turn! 👆');
+                }
+                
+                gameState.processing = false;
+            }, 600);
         }
 
         // ============================================
@@ -813,16 +679,16 @@
                 }
             }
 
-            // Take center
+            // Center
             if (gameState.board[4] === 0) return 4;
 
-            // Take corner
+            // Corner
             const corners = [0, 2, 6, 8];
             for (let c of corners) {
                 if (gameState.board[c] === 0) return c;
             }
 
-            // Take any
+            // Any
             for (let i = 0; i < 9; i++) {
                 if (gameState.board[i] === 0) return i;
             }
@@ -839,11 +705,15 @@
             return lines.some(line => line.every(i => gameState.board[i] === player));
         }
 
-        function endGame(result) {
+        // ============================================
+        // END GAME
+        // ============================================
+        async function endGame(result) {
             gameState.active = false;
             elements.startBtn.disabled = false;
 
             if (gameState.mode === 'free') {
+                // Free play: update local stats
                 gameState.stats.games++;
                 
                 if (result === 'win') {
@@ -859,9 +729,56 @@
                 localStorage.setItem('tictactoe_celo_stats', JSON.stringify(gameState.stats));
                 updateStatsDisplay();
             } else {
+                // On-chain: record result
+                await recordOnChainResult(result);
+            }
+        }
+
+        async function recordOnChainResult(result) {
+            if (!gameState.gameStartedOnChain) {
+                // Game wasn't started on-chain, just show result
                 if (result === 'win') setStatus('🎉 You Win!', 'win');
                 else if (result === 'lose') setStatus('😢 AI Wins', 'lose');
                 else setStatus('🤝 Draw!');
+                return;
+            }
+
+            try {
+                // Convert result: win=1, lose=2, draw=3
+                let resultCode;
+                if (result === 'win') {
+                    resultCode = 1;
+                    setStatus('🎉 You Win! Recording on blockchain... ⏳', 'win');
+                } else if (result === 'lose') {
+                    resultCode = 2;
+                    setStatus('😢 AI Wins! Recording on blockchain... ⏳', 'lose');
+                } else {
+                    resultCode = 3;
+                    setStatus('🤝 Draw! Recording on blockchain... ⏳');
+                }
+
+                const tx = await gameState.contract.endGame(resultCode);
+                console.log('📤 End game tx:', tx.hash);
+                
+                await tx.wait();
+                console.log('✅ Result recorded on-chain');
+                
+                gameState.gameStartedOnChain = false;
+
+                // Load updated stats
+                await loadOnChainStats();
+                
+                if (result === 'win') {
+                    setStatus('🎉 Victory recorded on blockchain!', 'win');
+                } else if (result === 'lose') {
+                    setStatus('😢 AI Wins - recorded on blockchain', 'lose');
+                } else {
+                    setStatus('🤝 Draw - recorded on blockchain');
+                }
+            } catch (error) {
+                console.error('❌ Failed to record result:', error);
+                setStatus('⚠️ Game finished but not recorded on-chain', 'lose');
+                gameState.gameStartedOnChain = false;
             }
         }
 
@@ -870,10 +787,35 @@
             
             gameState.board = [0,0,0,0,0,0,0,0,0];
             gameState.active = false;
+            gameState.gameStartedOnChain = false;
             updateBoard();
             setStatus('Click Start to begin! 🚀');
             elements.startBtn.disabled = false;
             elements.resetBtn.disabled = true;
+        }
+
+        // ============================================
+        // STATS
+        // ============================================
+        async function loadOnChainStats() {
+            if (!gameState.contract || !gameState.address) return;
+
+            try {
+                const stats = await gameState.contract.getPlayerStats(gameState.address);
+                
+                // Stats order: gamesPlayed, wins, losses, draws, winRate, currentStreak, bestStreak
+                document.getElementById('statGames').textContent = stats[0].toString();
+                document.getElementById('statWins').textContent = stats[1].toString();
+                document.getElementById('statLosses').textContent = stats[2].toString();
+                
+                console.log('✅ On-chain stats loaded:', {
+                    games: stats[0].toString(),
+                    wins: stats[1].toString(),
+                    losses: stats[2].toString()
+                });
+            } catch (error) {
+                console.error('❌ Failed to load stats:', error);
+            }
         }
 
         // ============================================
@@ -884,7 +826,14 @@
             elements.freeBtn.classList.toggle('active', mode === 'free');
             elements.chainBtn.classList.toggle('active', mode === 'chain');
             elements.walletCard.classList.toggle('show', mode === 'chain');
+            
             resetGame();
+            
+            if (mode === 'free') {
+                updateStatsDisplay();
+            } else if (gameState.connected) {
+                loadOnChainStats();
+            }
         }
 
         function updateBoard() {
@@ -912,33 +861,20 @@
         // ============================================
         // EVENT LISTENERS
         // ============================================
-        
-        // Listen for account changes
         if (window.ethereum) {
             window.ethereum.on('accountsChanged', (accounts) => {
-                if (accounts.length === 0) {
-                    console.log('👛 Wallet disconnected');
-                    gameState.connected = false;
-                    gameState.address = null;
-                    elements.walletLabel.textContent = 'Wallet disconnected';
-                    elements.walletAddress.style.display = 'none';
-                    elements.connectBtn.style.display = 'block';
-                    elements.connectBtn.disabled = false;
-                    resetGame();
-                } else if (accounts[0] !== gameState.address) {
-                    console.log('👛 Account changed, reloading...');
+                if (accounts.length === 0 || accounts[0] !== gameState.address) {
                     window.location.reload();
                 }
             });
 
-            window.ethereum.on('chainChanged', (chainId) => {
-                console.log('🌐 Network changed:', chainId);
+            window.ethereum.on('chainChanged', () => {
                 window.location.reload();
             });
         }
 
         // ============================================
-        // START APPLICATION
+        // START
         // ============================================
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', init);
@@ -946,7 +882,7 @@
             init();
         }
 
-        console.log('🎮 Tic Tac Toe on Celo Mainnet - Ready!');
+        console.log('🎮 Tic Tac Toe ready! Contract:', CONTRACT_ADDRESS);
     </script>
 </body>
 </html>
