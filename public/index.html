@@ -135,6 +135,11 @@
             color: white;
         }
 
+        .btn-secondary {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+            color: white;
+        }
+
         .btn-success {
             background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
             color: white;
@@ -226,6 +231,7 @@
             border-radius: 16px;
             padding: 20px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
         }
 
         .stats-header {
@@ -265,6 +271,39 @@
             color: #666;
             text-transform: uppercase;
             font-weight: 600;
+        }
+
+        .share-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+
+        .share-title {
+            font-size: 1em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: #1A1A1A;
+        }
+
+        .share-subtitle {
+            font-size: 0.85em;
+            color: #666;
+            margin-bottom: 16px;
+        }
+
+        .share-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
         }
     </style>
 </head>
@@ -331,6 +370,17 @@
                     <div class="stat-value" id="statDraws">0</div>
                     <div class="stat-label">Draws</div>
                 </div>
+            </div>
+        </div>
+
+        <div class="share-section">
+            <div class="share-title">🎯 Share Your Results</div>
+            <div class="share-subtitle">Challenge your friends on Farcaster!</div>
+            <div class="share-buttons">
+                <button class="btn btn-secondary btn-icon" id="shareBtn">
+                    <span>🟣</span>
+                    <span>Share on Farcaster</span>
+                </button>
             </div>
         </div>
     </div>
@@ -415,7 +465,8 @@
             status: document.getElementById('status'),
             board: document.getElementById('board'),
             startBtn: document.getElementById('startBtn'),
-            resetBtn: document.getElementById('resetBtn')
+            resetBtn: document.getElementById('resetBtn'),
+            shareBtn: document.getElementById('shareBtn')
         };
 
         // ============================================
@@ -441,6 +492,7 @@
             elements.connectBtn.onclick = connectWallet;
             elements.startBtn.onclick = startGame;
             elements.resetBtn.onclick = resetGame;
+            elements.shareBtn.onclick = shareResults;
 
             // Load stats
             const saved = localStorage.getItem('tictactoe_celo_stats');
@@ -870,6 +922,98 @@
             document.getElementById('statWins').textContent = gameState.stats.wins;
             document.getElementById('statLosses').textContent = gameState.stats.losses;
             document.getElementById('statDraws').textContent = gameState.stats.draws;
+        }
+
+        // ============================================
+        // SHARE FUNCTIONALITY
+        // ============================================
+        function shareResults() {
+            try {
+                // Get current stats
+                const stats = gameState.mode === 'chain' && gameState.connected
+                    ? getOnChainStatsForShare()
+                    : gameState.stats;
+
+                // Create share text
+                const winRate = stats.games > 0 
+                    ? ((stats.wins / stats.games) * 100).toFixed(0)
+                    : 0;
+
+                const shareText = `🎮 I'm playing Tic Tac Toe on Celo!\n\n📊 My Stats:\n🎯 Games: ${stats.games}\n🏆 Wins: ${stats.wins}\n❌ Losses: ${stats.losses}\n🤝 Draws: ${stats.draws}\n📈 Win Rate: ${winRate}%\n\n${gameState.mode === 'chain' ? '⛓️ Playing on-chain with verified results!\n' : ''}Can you beat me? 👇`;
+
+                // Get app URL (replace with your actual URL)
+                const appUrl = window.location.href;
+
+                // Create Farcaster share URL
+                const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
+
+                // Open in new tab/window
+                window.open(farcasterShareUrl, '_blank');
+
+                console.log('📤 Share opened');
+                setStatus('Share window opened! 🚀', 'win');
+
+            } catch (error) {
+                console.error('❌ Share error:', error);
+                
+                // Fallback: copy to clipboard
+                copyToClipboard();
+            }
+        }
+
+        function getOnChainStatsForShare() {
+            // Get stats from displayed values
+            return {
+                games: parseInt(document.getElementById('statGames').textContent) || 0,
+                wins: parseInt(document.getElementById('statWins').textContent) || 0,
+                losses: parseInt(document.getElementById('statLosses').textContent) || 0,
+                draws: parseInt(document.getElementById('statDraws').textContent) || 0
+            };
+        }
+
+        function copyToClipboard() {
+            try {
+                const stats = gameState.mode === 'chain' && gameState.connected
+                    ? getOnChainStatsForShare()
+                    : gameState.stats;
+
+                const winRate = stats.games > 0 
+                    ? ((stats.wins / stats.games) * 100).toFixed(0)
+                    : 0;
+
+                const shareText = `🎮 I'm playing Tic Tac Toe on Celo!\n\n📊 My Stats:\n🎯 Games: ${stats.games}\n🏆 Wins: ${stats.wins}\n❌ Losses: ${stats.losses}\n🤝 Draws: ${stats.draws}\n📈 Win Rate: ${winRate}%\n\n${gameState.mode === 'chain' ? '⛓️ Playing on-chain!\n' : ''}${window.location.href}`;
+
+                // Copy to clipboard
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(shareText).then(() => {
+                        setStatus('✅ Results copied to clipboard!', 'win');
+                        console.log('✅ Copied to clipboard');
+                    }).catch(err => {
+                        console.error('Failed to copy:', err);
+                        setStatus('⚠️ Could not copy to clipboard', 'lose');
+                    });
+                } else {
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = shareText;
+                    textArea.style.position = 'fixed';
+                    textArea.style.left = '-999999px';
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    try {
+                        document.execCommand('copy');
+                        setStatus('✅ Results copied to clipboard!', 'win');
+                        console.log('✅ Copied to clipboard (fallback)');
+                    } catch (err) {
+                        console.error('Failed to copy (fallback):', err);
+                        setStatus('⚠️ Could not copy to clipboard', 'lose');
+                    }
+                    document.body.removeChild(textArea);
+                }
+            } catch (error) {
+                console.error('❌ Clipboard error:', error);
+                setStatus('⚠️ Share failed', 'lose');
+            }
         }
 
         // ============================================
