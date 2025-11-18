@@ -354,7 +354,15 @@
                 <div class="wallet-label" id="walletLabel">Not connected</div>
                 <div class="wallet-address" id="walletAddress" style="display:none;"></div>
             </div>
-            <button class="btn btn-primary" id="connectBtn">
+            <div id="walletSelector" style="display:block;">
+                <button class="btn btn-primary" id="connectFarcasterBtn" style="margin-bottom: 10px;">
+                    🟣 Connect Farcaster Wallet
+                </button>
+                <button class="btn btn-secondary" id="connectOtherBtn">
+                    🦊 Connect Other Wallet
+                </button>
+            </div>
+            <button class="btn btn-primary" id="connectBtn" style="display:none;">
                 Connect Wallet
             </button>
         </div>
@@ -430,8 +438,16 @@
                 window.farcasterUser = context.user;
                 console.log('👤 Farcaster user:', context.user.username);
             }
+
+            // Inject Farcaster wallet provider if available
+            if (sdk.wallet && sdk.wallet.ethProvider) {
+                console.log('🔌 Farcaster wallet detected, setting as provider');
+                window.ethereum = sdk.wallet.ethProvider;
+                window.farcasterWallet = true;
+            }
         }).catch(e => {
             console.log('ℹ️ Not in Farcaster frame');
+            window.farcasterWallet = false;
         });
     </script>
 
@@ -496,6 +512,9 @@
             walletLabel: document.getElementById('walletLabel'),
             walletAddress: document.getElementById('walletAddress'),
             connectBtn: document.getElementById('connectBtn'),
+            connectFarcasterBtn: document.getElementById('connectFarcasterBtn'),
+            connectOtherBtn: document.getElementById('connectOtherBtn'),
+            walletSelector: document.getElementById('walletSelector'),
             status: document.getElementById('status'),
             board: document.getElementById('board'),
             startBtn: document.getElementById('startBtn'),
@@ -524,6 +543,8 @@
             elements.freeBtn.onclick = () => switchMode('free');
             elements.chainBtn.onclick = () => switchMode('chain');
             elements.connectBtn.onclick = connectWallet;
+            elements.connectFarcasterBtn.onclick = () => connectWallet('farcaster');
+            elements.connectOtherBtn.onclick = () => connectWallet('other');
             elements.startBtn.onclick = startGame;
             elements.resetBtn.onclick = resetGame;
             elements.shareBtn.onclick = shareResults;
@@ -541,21 +562,63 @@
         // ============================================
         // WALLET CONNECTION
         // ============================================
-        async function connectWallet() {
+        async function connectWallet(walletType = 'auto') {
             if (gameState.processing) return;
             gameState.processing = true;
 
             try {
-                setStatus('Connecting to Farcaster wallet... 🔗');
-                elements.connectBtn.disabled = true;
-                elements.connectBtn.textContent = 'Connecting...';
+                // Disable buttons during connection
+                if (elements.connectFarcasterBtn) elements.connectFarcasterBtn.disabled = true;
+                if (elements.connectOtherBtn) elements.connectOtherBtn.disabled = true;
 
-                if (!window.ethereum) {
-                    throw new Error('No wallet found. Please open in Farcaster app.');
+                let provider = null;
+                let walletName = 'Wallet';
+
+                // Determine which wallet to use
+                if (walletType === 'farcaster') {
+                    setStatus('Connecting to Farcaster wallet... 🔗');
+                    console.log('🟣 Attempting Farcaster wallet connection');
+
+                    // Try to get Farcaster wallet from SDK
+                    if (window.farcasterSDK && window.farcasterSDK.wallet && window.farcasterSDK.wallet.ethProvider) {
+                        provider = window.farcasterSDK.wallet.ethProvider;
+                        walletName = 'Farcaster Wallet';
+                        console.log('✅ Using Farcaster SDK wallet provider');
+                    } else if (window.ethereum) {
+                        // Fallback to window.ethereum if in Farcaster
+                        provider = window.ethereum;
+                        walletName = 'Farcaster Wallet';
+                        console.log('⚠️ Using window.ethereum as fallback');
+                    } else {
+                        throw new Error('Farcaster wallet not available. Please ensure you are in the Farcaster app.');
+                    }
+                } else if (walletType === 'other') {
+                    setStatus('Connecting to external wallet... 🦊');
+                    console.log('🦊 Attempting external wallet connection');
+
+                    if (window.ethereum) {
+                        provider = window.ethereum;
+                        walletName = 'External Wallet';
+                        console.log('✅ Using window.ethereum provider');
+                    } else {
+                        throw new Error('No wallet found. Please install MetaMask or another Web3 wallet.');
+                    }
+                } else {
+                    // Auto-detect
+                    setStatus('Connecting wallet... 🔗');
+                    if (window.farcasterWallet && window.farcasterSDK?.wallet?.ethProvider) {
+                        provider = window.farcasterSDK.wallet.ethProvider;
+                        walletName = 'Farcaster Wallet';
+                    } else if (window.ethereum) {
+                        provider = window.ethereum;
+                        walletName = 'Wallet';
+                    } else {
+                        throw new Error('No wallet found.');
+                    }
                 }
 
-                console.log('🔌 Requesting accounts...');
-                const accounts = await window.ethereum.request({
+                console.log('🔌 Requesting accounts from', walletName);
+                const accounts = await provider.request({
                     method: 'eth_requestAccounts'
                 });
 
@@ -566,7 +629,7 @@
                 gameState.address = accounts[0];
                 console.log('✅ Connected:', gameState.address);
 
-                gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
+                gameState.provider = new ethers.providers.Web3Provider(provider);
 
                 // Check/Switch network
                 const network = await gameState.provider.getNetwork();
@@ -616,11 +679,14 @@
 
                 // Update UI
                 gameState.connected = true;
-                elements.walletLabel.textContent = '🟣 Farcaster Wallet Connected';
+                elements.walletLabel.textContent = `✅ ${walletName} Connected`;
                 elements.walletAddress.textContent =
                     gameState.address.slice(0, 6) + '...' + gameState.address.slice(-4);
                 elements.walletAddress.style.display = 'block';
-                elements.connectBtn.style.display = 'none';
+
+                // Hide wallet selector
+                if (elements.walletSelector) elements.walletSelector.style.display = 'none';
+                if (elements.connectBtn) elements.connectBtn.style.display = 'none';
 
                 // Load stats
                 await loadOnChainStats();
@@ -633,17 +699,27 @@
 
             } catch (error) {
                 console.error('❌ Connection error:', error);
-                
+
                 let errorMsg = 'Connection failed';
                 if (error.message.includes('rejected') || error.message.includes('denied')) {
                     errorMsg = 'Connection rejected';
                 } else if (error.message.includes('No wallet')) {
                     errorMsg = error.message;
+                } else if (error.message.includes('not available')) {
+                    errorMsg = error.message;
                 }
-                
+
                 setStatus(errorMsg + ' 😞', 'lose');
-                elements.connectBtn.textContent = 'Retry';
-                elements.connectBtn.disabled = false;
+
+                // Re-enable buttons
+                if (elements.connectFarcasterBtn) {
+                    elements.connectFarcasterBtn.disabled = false;
+                    elements.connectFarcasterBtn.textContent = '🟣 Connect Farcaster Wallet';
+                }
+                if (elements.connectOtherBtn) {
+                    elements.connectOtherBtn.disabled = false;
+                    elements.connectOtherBtn.textContent = '🦊 Connect Other Wallet';
+                }
             } finally {
                 gameState.processing = false;
             }
