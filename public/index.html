@@ -958,7 +958,7 @@
         // ============================================
         // SHARE FUNCTIONALITY
         // ============================================
-        async function shareResults() {
+        function shareResults() {
             try {
                 // Get current stats
                 const stats = gameState.mode === 'chain' && gameState.connected
@@ -972,44 +972,27 @@
 
                 const shareText = `🎮 I'm playing Tic Tac Toe on Celo!\n\n📊 My Stats:\n🎯 Games: ${stats.games}\n🏆 Wins: ${stats.wins}\n❌ Losses: ${stats.losses}\n🤝 Draws: ${stats.draws}\n📈 Win Rate: ${winRate}%\n\n${gameState.mode === 'chain' ? '⛓️ Playing on-chain with verified results!\n' : ''}Can you beat me? 👇`;
 
-                // Get app URL
-                const appUrl = window.location.href;
+                // Use the production URL for sharing
+                const appUrl = 'https://tictactoe-farcaster.vercel.app';
 
-                // If in Farcaster frame, use SDK to share
-                if (window.farcasterSDK && window.farcasterReady) {
-                    try {
-                        console.log('📤 Sharing via Farcaster SDK');
+                // Create Warpcast share URL with embedded link
+                const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
 
-                        // Use Farcaster SDK actions to open composer
-                        await window.farcasterSDK.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`);
+                console.log('📤 Opening share URL:', warpcastUrl);
 
-                        setStatus('Share opened in Farcaster! 🚀', 'win');
-                        console.log('✅ Share opened via SDK');
-                        return;
-                    } catch (sdkError) {
-                        console.warn('⚠️ SDK share failed, trying fallback:', sdkError);
-                    }
-                }
-
-                // Fallback for non-frame context
-                const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
-
-                // Try window.open for standalone mode
-                const opened = window.open(farcasterShareUrl, '_blank');
+                // Open in new window/tab
+                const opened = window.open(warpcastUrl, '_blank', 'noopener,noreferrer');
 
                 if (opened) {
-                    console.log('📤 Share opened in new window');
+                    console.log('✅ Share window opened');
                     setStatus('Share window opened! 🚀', 'win');
                 } else {
-                    // If blocked, copy to clipboard
                     console.log('⚠️ Popup blocked, copying to clipboard');
                     copyToClipboard();
                 }
 
             } catch (error) {
                 console.error('❌ Share error:', error);
-
-                // Fallback: copy to clipboard
                 copyToClipboard();
             }
         }
