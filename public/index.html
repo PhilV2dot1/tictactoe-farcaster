@@ -407,48 +407,29 @@
         </div>
     </div>
 
-    <!-- Farcaster Frame SDK - Load synchronously -->
+    <!-- Farcaster Frame SDK -->
     <script type="module">
-        // Import and initialize IMMEDIATELY
-        const sdk = await import('https://esm.sh/@farcaster/frame-sdk@0.2.1');
+        import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
 
-        // Store SDK globally BEFORE calling ready
-        window.farcasterSDK = sdk.default || sdk;
-        window.farcasterReady = false;
-        window.farcasterContext = null;
-        window.farcasterUser = null;
+        // Call ready() IMMEDIATELY without await - this is critical for Farcaster
+        sdk.actions.ready({});
 
-        // Call ready() IMMEDIATELY - this is critical
-        try {
-            console.log('🔌 Calling sdk.actions.ready()...');
-            await window.farcasterSDK.actions.ready({});
-            window.farcasterReady = true;
-            console.log('✅ Farcaster SDK ready');
+        window.farcasterSDK = sdk;
+        window.farcasterReady = true;
+        console.log('✅ Farcaster SDK ready');
 
-            // Get context after ready
-            try {
-                const context = await window.farcasterSDK.context;
-                window.farcasterContext = context;
-                console.log('📱 Farcaster context:', context);
+        // Get context asynchronously (non-blocking)
+        sdk.context.then(context => {
+            window.farcasterContext = context;
+            console.log('📱 Farcaster context:', context);
 
-                // Store user info if available
-                if (context && context.user) {
-                    window.farcasterUser = context.user;
-                    console.log('👤 Farcaster user:', context.user.username);
-                }
-
-                // Add Ethereum provider from Farcaster
-                if (window.farcasterSDK.wallet) {
-                    console.log('🔌 Farcaster wallet provider available');
-                    window.ethereum = window.farcasterSDK.wallet.ethProvider || window.ethereum;
-                }
-            } catch (contextError) {
-                console.log('ℹ️ Could not get Farcaster context:', contextError.message);
+            if (context && context.user) {
+                window.farcasterUser = context.user;
+                console.log('👤 Farcaster user:', context.user.username);
             }
-        } catch (e) {
-            console.log('ℹ️ Not in Farcaster frame, running standalone:', e.message);
-            window.farcasterReady = false;
-        }
+        }).catch(e => {
+            console.log('ℹ️ Not in Farcaster frame');
+        });
     </script>
 
     <!-- Ethers.js -->
@@ -527,16 +508,6 @@
             console.log('📝 Contract:', CONTRACT_ADDRESS);
             console.log('🔗 Explorer:', CELO_MAINNET.blockExplorerUrls[0] + '/address/' + CONTRACT_ADDRESS);
 
-            // Check if running in Farcaster frame
-            if (window.farcasterReady && window.farcasterContext) {
-                console.log('🟣 Running in Farcaster frame');
-                if (window.farcasterUser) {
-                    console.log('👤 User:', window.farcasterUser.username);
-                }
-            } else {
-                console.log('🌐 Running in standalone mode');
-            }
-
             // Create board
             for (let i = 0; i < 9; i++) {
                 const cell = document.createElement('div');
@@ -576,32 +547,12 @@
                 elements.connectBtn.disabled = true;
                 elements.connectBtn.textContent = 'Connecting...';
 
-                // Wait for SDK to be ready if in frame
-                if (window.farcasterSDK && !window.farcasterReady) {
-                    console.log('⏳ Waiting for Farcaster SDK to be ready...');
-                    await new Promise(resolve => setTimeout(resolve, 1000));
-                }
-
-                // Try to get Ethereum provider
-                let provider = window.ethereum;
-
-                // If in Farcaster frame, use SDK wallet
-                if (window.farcasterSDK && window.farcasterSDK.wallet) {
-                    console.log('🔌 Using Farcaster wallet provider');
-                    provider = window.farcasterSDK.wallet.ethProvider;
-
-                    if (!provider) {
-                        console.warn('⚠️ No ethProvider in Farcaster SDK, falling back to window.ethereum');
-                        provider = window.ethereum;
-                    }
-                }
-
-                if (!provider) {
-                    throw new Error('No wallet found. Please open in Farcaster app or connect MetaMask.');
+                if (!window.ethereum) {
+                    throw new Error('No wallet found. Please open in Farcaster app.');
                 }
 
                 console.log('🔌 Requesting accounts...');
-                const accounts = await provider.request({
+                const accounts = await window.ethereum.request({
                     method: 'eth_requestAccounts'
                 });
 
@@ -612,7 +563,7 @@
                 gameState.address = accounts[0];
                 console.log('✅ Connected:', gameState.address);
 
-                gameState.provider = new ethers.providers.Web3Provider(provider);
+                gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
 
                 // Check/Switch network
                 const network = await gameState.provider.getNetwork();
@@ -623,13 +574,13 @@
                     setStatus('Switching to Celo... 🔄');
 
                     try {
-                        await provider.request({
+                        await window.ethereum.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: CELO_MAINNET.chainIdHex }]
                         });
                     } catch (switchError) {
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            await provider.request({
+                            await window.ethereum.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [CELO_MAINNET]
                             });
@@ -638,7 +589,7 @@
                         }
                     }
 
-                    gameState.provider = new ethers.providers.Web3Provider(provider);
+                    gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
                 }
 
                 // Balance
@@ -662,8 +613,7 @@
 
                 // Update UI
                 gameState.connected = true;
-                const walletType = (window.farcasterReady && window.farcasterContext) ? 'Farcaster' : 'Web3';
-                elements.walletLabel.textContent = `🟣 ${walletType} Wallet Connected`;
+                elements.walletLabel.textContent = '🟣 Farcaster Wallet Connected';
                 elements.walletAddress.textContent =
                     gameState.address.slice(0, 6) + '...' + gameState.address.slice(-4);
                 elements.walletAddress.style.display = 'block';
@@ -1122,27 +1072,17 @@
         // ============================================
         // EVENT LISTENERS
         // ============================================
-        function setupWalletListeners() {
-            const provider = window.ethereum || (window.farcasterSDK?.wallet?.ethProvider);
-
-            if (provider && provider.on) {
-                provider.on('accountsChanged', (accounts) => {
-                    console.log('🔄 Account changed:', accounts);
-                    if (accounts.length === 0 || accounts[0] !== gameState.address) {
-                        console.log('Reloading due to account change...');
-                        window.location.reload();
-                    }
-                });
-
-                provider.on('chainChanged', (chainId) => {
-                    console.log('🔄 Chain changed:', chainId);
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0 || accounts[0] !== gameState.address) {
                     window.location.reload();
-                });
-            }
-        }
+                }
+            });
 
-        // Setup listeners after a short delay to ensure SDK is ready
-        setTimeout(setupWalletListeners, 1000);
+            window.ethereum.on('chainChanged', () => {
+                window.location.reload();
+            });
+        }
 
         // ============================================
         // START
