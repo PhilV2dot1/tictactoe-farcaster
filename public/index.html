@@ -40,6 +40,7 @@
             font-weight: 700;
             background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
             -webkit-background-clip: text;
+            background-clip: text;
             -webkit-text-fill-color: transparent;
             margin-bottom: 4px;
         }
@@ -395,32 +396,35 @@
         window.farcasterContext = null;
         window.farcasterUser = null;
 
-        // Ready call - critical for frame loading
-        try {
-            await sdk.actions.ready({});
-            window.farcasterReady = true;
-            console.log('✅ Farcaster SDK ready');
+        // Async initialization function
+        (async () => {
+            try {
+                // Ready call - critical for frame loading
+                await sdk.actions.ready({});
+                window.farcasterReady = true;
+                console.log('✅ Farcaster SDK ready');
 
-            // Get context
-            const context = await sdk.context;
-            window.farcasterContext = context;
-            console.log('📱 Farcaster context:', context);
+                // Get context
+                const context = await sdk.context;
+                window.farcasterContext = context;
+                console.log('📱 Farcaster context:', context);
 
-            // Store user info if available
-            if (context && context.user) {
-                window.farcasterUser = context.user;
-                console.log('👤 Farcaster user:', context.user.username);
+                // Store user info if available
+                if (context && context.user) {
+                    window.farcasterUser = context.user;
+                    console.log('👤 Farcaster user:', context.user.username);
+                }
+
+                // Add Ethereum provider from Farcaster
+                if (sdk.wallet) {
+                    console.log('🔌 Farcaster wallet provider available');
+                    window.ethereum = sdk.wallet.ethProvider || window.ethereum;
+                }
+            } catch (e) {
+                console.log('ℹ️ Not in Farcaster frame, running standalone:', e.message);
+                window.farcasterReady = false;
             }
-
-            // Add Ethereum provider from Farcaster
-            if (sdk.wallet) {
-                console.log('🔌 Farcaster wallet provider available');
-                window.ethereum = sdk.wallet.ethProvider || window.ethereum;
-            }
-        } catch (e) {
-            console.log('ℹ️ Not in Farcaster frame, running standalone:', e.message);
-            window.farcasterReady = false;
-        }
+        })();
     </script>
 
     <!-- Ethers.js -->
@@ -980,7 +984,7 @@
         // ============================================
         // SHARE FUNCTIONALITY
         // ============================================
-        function shareResults() {
+        async function shareResults() {
             try {
                 // Get current stats
                 const stats = gameState.mode === 'chain' && gameState.connected
@@ -988,27 +992,49 @@
                     : gameState.stats;
 
                 // Create share text
-                const winRate = stats.games > 0 
+                const winRate = stats.games > 0
                     ? ((stats.wins / stats.games) * 100).toFixed(0)
                     : 0;
 
                 const shareText = `🎮 I'm playing Tic Tac Toe on Celo!\n\n📊 My Stats:\n🎯 Games: ${stats.games}\n🏆 Wins: ${stats.wins}\n❌ Losses: ${stats.losses}\n🤝 Draws: ${stats.draws}\n📈 Win Rate: ${winRate}%\n\n${gameState.mode === 'chain' ? '⛓️ Playing on-chain with verified results!\n' : ''}Can you beat me? 👇`;
 
-                // Get app URL (replace with your actual URL)
+                // Get app URL
                 const appUrl = window.location.href;
 
-                // Create Farcaster share URL
+                // If in Farcaster frame, use SDK to share
+                if (window.farcasterSDK && window.farcasterReady) {
+                    try {
+                        console.log('📤 Sharing via Farcaster SDK');
+
+                        // Use Farcaster SDK actions to open composer
+                        await window.farcasterSDK.actions.openUrl(`https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`);
+
+                        setStatus('Share opened in Farcaster! 🚀', 'win');
+                        console.log('✅ Share opened via SDK');
+                        return;
+                    } catch (sdkError) {
+                        console.warn('⚠️ SDK share failed, trying fallback:', sdkError);
+                    }
+                }
+
+                // Fallback for non-frame context
                 const farcasterShareUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
 
-                // Open in new tab/window
-                window.open(farcasterShareUrl, '_blank');
+                // Try window.open for standalone mode
+                const opened = window.open(farcasterShareUrl, '_blank');
 
-                console.log('📤 Share opened');
-                setStatus('Share window opened! 🚀', 'win');
+                if (opened) {
+                    console.log('📤 Share opened in new window');
+                    setStatus('Share window opened! 🚀', 'win');
+                } else {
+                    // If blocked, copy to clipboard
+                    console.log('⚠️ Popup blocked, copying to clipboard');
+                    copyToClipboard();
+                }
 
             } catch (error) {
                 console.error('❌ Share error:', error);
-                
+
                 // Fallback: copy to clipboard
                 copyToClipboard();
             }
@@ -1030,7 +1056,7 @@
                     ? getOnChainStatsForShare()
                     : gameState.stats;
 
-                const winRate = stats.games > 0 
+                const winRate = stats.games > 0
                     ? ((stats.wins / stats.games) * 100).toFixed(0)
                     : 0;
 
@@ -1039,7 +1065,7 @@
                 // Copy to clipboard
                 if (navigator.clipboard && navigator.clipboard.writeText) {
                     navigator.clipboard.writeText(shareText).then(() => {
-                        setStatus('✅ Results copied to clipboard!', 'win');
+                        setStatus('✅ Results copied! Paste in Farcaster to share', 'win');
                         console.log('✅ Copied to clipboard');
                     }).catch(err => {
                         console.error('Failed to copy:', err);
@@ -1055,7 +1081,7 @@
                     textArea.select();
                     try {
                         document.execCommand('copy');
-                        setStatus('✅ Results copied to clipboard!', 'win');
+                        setStatus('✅ Results copied! Paste in Farcaster to share', 'win');
                         console.log('✅ Copied to clipboard (fallback)');
                     } catch (err) {
                         console.error('Failed to copy (fallback):', err);
