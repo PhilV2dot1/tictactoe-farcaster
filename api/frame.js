@@ -55,7 +55,7 @@ export default function handler(req, res) {
 
         <!-- Frame Buttons -->
         <meta property="fc:frame:button:1" content="🎮 Play Game" />
-        <meta property="fc:frame:button:1:action" content="link" />
+        <meta property="fc:frame:button:1:action" content="launch_frame" />
         <meta property="fc:frame:button:1:target" content="${baseUrl}" />
       </head>
       <body>
