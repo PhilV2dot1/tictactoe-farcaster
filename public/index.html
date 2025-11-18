@@ -407,26 +407,27 @@
         </div>
     </div>
 
-    <!-- Farcaster Frame SDK -->
+    <!-- Farcaster Frame SDK - Load synchronously -->
     <script type="module">
-        import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.2.1';
+        // Import and initialize IMMEDIATELY
+        const sdk = await import('https://esm.sh/@farcaster/frame-sdk@0.2.1');
 
-        // Initialize SDK context
-        window.farcasterSDK = sdk;
+        // Store SDK globally BEFORE calling ready
+        window.farcasterSDK = sdk.default || sdk;
         window.farcasterReady = false;
         window.farcasterContext = null;
         window.farcasterUser = null;
 
-        // Async initialization function
-        (async () => {
-            try {
-                // Ready call - critical for frame loading
-                await sdk.actions.ready({});
-                window.farcasterReady = true;
-                console.log('✅ Farcaster SDK ready');
+        // Call ready() IMMEDIATELY - this is critical
+        try {
+            console.log('🔌 Calling sdk.actions.ready()...');
+            await window.farcasterSDK.actions.ready({});
+            window.farcasterReady = true;
+            console.log('✅ Farcaster SDK ready');
 
-                // Get context
-                const context = await sdk.context;
+            // Get context after ready
+            try {
+                const context = await window.farcasterSDK.context;
                 window.farcasterContext = context;
                 console.log('📱 Farcaster context:', context);
 
@@ -437,15 +438,17 @@
                 }
 
                 // Add Ethereum provider from Farcaster
-                if (sdk.wallet) {
+                if (window.farcasterSDK.wallet) {
                     console.log('🔌 Farcaster wallet provider available');
-                    window.ethereum = sdk.wallet.ethProvider || window.ethereum;
+                    window.ethereum = window.farcasterSDK.wallet.ethProvider || window.ethereum;
                 }
-            } catch (e) {
-                console.log('ℹ️ Not in Farcaster frame, running standalone:', e.message);
-                window.farcasterReady = false;
+            } catch (contextError) {
+                console.log('ℹ️ Could not get Farcaster context:', contextError.message);
             }
-        })();
+        } catch (e) {
+            console.log('ℹ️ Not in Farcaster frame, running standalone:', e.message);
+            window.farcasterReady = false;
+        }
     </script>
 
     <!-- Ethers.js -->
