@@ -23,6 +23,9 @@
     <meta property="fc:frame:image" content="https://tictactoe-farcaster.vercel.app/frame-preview.png" />
     <meta property="fc:frame:image:aspect_ratio" content="1:1" />
 
+    <!-- Farcaster Mini App Sharing -->
+    <meta name="fc:miniapp" content='{"version":"1","imageUrl":"https://tictactoe-farcaster.vercel.app/frame-preview.png","button":{"title":"Play Tic Tac Toe","action":{"type":"launch_miniapp","url":"https://tictactoe-farcaster.vercel.app","name":"Tic Tac Toe on Celo","splashImageUrl":"https://tictactoe-farcaster.vercel.app/frame-preview.png","splashBackgroundColor":"#FCFF52"}}}' />
+
     <!-- Farcaster Manifest -->
     <link rel="manifest" href="/.well-known/farcaster.json" />
 
@@ -972,23 +975,39 @@
 
                 const shareText = `🎮 I'm playing Tic Tac Toe on Celo!\n\n📊 My Stats:\n🎯 Games: ${stats.games}\n🏆 Wins: ${stats.wins}\n❌ Losses: ${stats.losses}\n🤝 Draws: ${stats.draws}\n📈 Win Rate: ${winRate}%\n\n${gameState.mode === 'chain' ? '⛓️ Playing on-chain with verified results!\n' : ''}Can you beat me? 👇`;
 
-                // Use the production URL for sharing
+                // Use the production URL
                 const appUrl = 'https://tictactoe-farcaster.vercel.app';
 
-                // Create Warpcast share URL with embedded link
-                const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
+                // In Farcaster, use the share action from SDK
+                if (window.farcasterSDK && window.farcasterReady) {
+                    console.log('📤 Sharing via Farcaster SDK...');
 
-                console.log('📤 Opening share URL:', warpcastUrl);
+                    // Copy to clipboard for user to paste
+                    const fullText = `${shareText}\n\n${appUrl}`;
 
-                // Open in new window/tab
-                const opened = window.open(warpcastUrl, '_blank', 'noopener,noreferrer');
-
-                if (opened) {
-                    console.log('✅ Share window opened');
-                    setStatus('Share window opened! 🚀', 'win');
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(fullText).then(() => {
+                            setStatus('✅ Text copied! Open composer to paste and share', 'win');
+                            console.log('✅ Copied to clipboard for sharing');
+                        }).catch(err => {
+                            console.error('Failed to copy:', err);
+                            setStatus('⚠️ Could not copy to clipboard', 'lose');
+                        });
+                    }
                 } else {
-                    console.log('⚠️ Popup blocked, copying to clipboard');
-                    copyToClipboard();
+                    // Standalone mode: open Warpcast compose
+                    const warpcastUrl = `https://warpcast.com/~/compose?text=${encodeURIComponent(shareText)}&embeds[]=${encodeURIComponent(appUrl)}`;
+
+                    console.log('📤 Opening Warpcast composer');
+                    const opened = window.open(warpcastUrl, '_blank', 'noopener,noreferrer');
+
+                    if (opened) {
+                        console.log('✅ Share window opened');
+                        setStatus('Share window opened! 🚀', 'win');
+                    } else {
+                        console.log('⚠️ Popup blocked, copying to clipboard');
+                        copyToClipboard();
+                    }
                 }
 
             } catch (error) {
