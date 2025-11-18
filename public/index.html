@@ -389,15 +389,28 @@
     <script type="module">
         import sdk from 'https://esm.sh/@farcaster/frame-sdk@0.0.5';
         
+        // Ready call - critical for frame loading
         sdk.actions.ready({});
+        
+        // Store SDK globally
         window.farcasterSDK = sdk;
+        window.farcasterReady = true;
+        
         console.log('✅ Farcaster SDK ready');
         
+        // Get context
         sdk.context.then(context => {
             window.farcasterContext = context;
             console.log('📱 Farcaster context:', context);
+            
+            // Store user info if available
+            if (context && context.user) {
+                window.farcasterUser = context.user;
+                console.log('👤 Farcaster user:', context.user.username);
+            }
         }).catch(e => {
             console.log('ℹ️ Not in Farcaster frame');
+            window.farcasterReady = false;
         });
     </script>
 
