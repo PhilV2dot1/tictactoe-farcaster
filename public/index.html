@@ -331,126 +331,184 @@
             gap: 8px;
         }
 
-        /* Wallet Selector Modal */
-        .wallet-selector-overlay {
+        /* Wallet Modal - RainbowKit Style */
+        .wallet-modal-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.4);
             display: flex;
             align-items: center;
             justify-content: center;
             z-index: 1000;
-            backdrop-filter: blur(4px);
+            backdrop-filter: blur(8px);
+            animation: fadeIn 0.2s ease-out;
         }
 
-        .wallet-selector-modal {
-            background: white;
-            border-radius: 20px;
-            width: 90%;
-            max-width: 400px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            animation: slideIn 0.3s ease-out;
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
 
-        @keyframes slideIn {
+        @keyframes slideUp {
             from {
                 opacity: 0;
-                transform: translateY(-20px);
+                transform: translateY(40px) scale(0.95);
             }
             to {
                 opacity: 1;
-                transform: translateY(0);
+                transform: translateY(0) scale(1);
             }
         }
 
-        .wallet-selector-header {
+        .wallet-modal {
+            background: white;
+            border-radius: 24px;
+            width: 90%;
+            max-width: 360px;
+            max-height: 90vh;
+            overflow: hidden;
+            box-shadow:
+                0 4px 6px rgba(0, 0, 0, 0.1),
+                0 10px 20px rgba(0, 0, 0, 0.15),
+                0 0 0 1px rgba(0, 0, 0, 0.05);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .wallet-modal-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
-            border-bottom: 1px solid #E5E5E5;
+            padding: 24px 24px 16px;
+            border-bottom: 1px solid #F0F0F0;
         }
 
-        .wallet-selector-header h3 {
+        .wallet-modal-header h2 {
             margin: 0;
-            font-size: 1.2em;
+            font-size: 1.125em;
             font-weight: 700;
             color: #1A1A1A;
+            letter-spacing: -0.02em;
         }
 
-        .wallet-selector-close {
-            background: none;
+        .wallet-modal-close {
+            background: #F5F5F5;
             border: none;
-            font-size: 1.8em;
-            color: #666;
-            cursor: pointer;
             width: 32px;
             height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            border-radius: 50%;
-            transition: background 0.2s;
+            font-size: 20px;
+            color: #666;
+            transition: all 0.15s;
+            font-weight: 300;
         }
 
-        .wallet-selector-close:hover {
-            background: #F0F0F0;
+        .wallet-modal-close:hover {
+            background: #E8E8E8;
+            transform: scale(1.05);
         }
 
-        .wallet-selector-body {
-            padding: 20px;
+        .wallet-modal-close:active {
+            transform: scale(0.95);
+        }
+
+        .wallet-modal-body {
+            padding: 8px 16px 16px;
+            max-height: calc(90vh - 80px);
+            overflow-y: auto;
         }
 
         .wallet-option {
             width: 100%;
-            padding: 16px;
-            margin-bottom: 12px;
-            background: #F8F8F8;
-            border: 2px solid transparent;
-            border-radius: 12px;
+            padding: 14px 16px;
+            margin: 8px 0;
+            background: white;
+            border: 2px solid #E8E8E8;
+            border-radius: 16px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 12px;
+            gap: 14px;
             font-size: 1em;
             font-weight: 600;
             color: #1A1A1A;
-            transition: all 0.2s;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            position: relative;
         }
 
         .wallet-option:hover {
-            background: #35D07F;
-            color: white;
+            background: #FAFAFA;
             border-color: #35D07F;
             transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(53, 208, 127, 0.15);
         }
 
         .wallet-option:active {
             transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(53, 208, 127, 0.1);
         }
 
         .wallet-option-icon {
-            font-size: 1.5em;
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
         }
 
-        .wallet-option-recommended {
-            background: #E8F5E9;
-            border-color: #35D07F;
+        .wallet-option-icon svg,
+        .wallet-option-icon img {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        .wallet-option-name {
+            flex: 1;
+            text-align: left;
+            font-size: 0.9375em;
+            letter-spacing: -0.01em;
         }
 
         .wallet-option-badge {
-            margin-left: auto;
-            background: #35D07F;
+            background: linear-gradient(135deg, #35D07F 0%, #2AB56F 100%);
             color: white;
-            font-size: 0.7em;
-            padding: 4px 8px;
-            border-radius: 6px;
+            font-size: 0.625em;
+            padding: 4px 10px;
+            border-radius: 8px;
             font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            box-shadow: 0 2px 4px rgba(53, 208, 127, 0.2);
+        }
+
+        .wallet-option-recommended {
+            border-color: #35D07F;
+            background: linear-gradient(135deg, rgba(53, 208, 127, 0.05) 0%, rgba(42, 181, 111, 0.05) 100%);
+        }
+
+        /* SVG Icon Styles */
+        .wallet-icon-metamask {
+            background: linear-gradient(135deg, #F6851B 0%, #E2761B 100%);
+        }
+
+        .wallet-icon-coinbase {
+            background: linear-gradient(135deg, #0052FF 0%, #0041CC 100%);
+        }
+
+        .wallet-icon-farcaster {
+            background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%);
+        }
+
+        .wallet-icon-generic {
+            background: linear-gradient(135deg, #64748B 0%, #475569 100%);
         }
     </style>
 </head>
@@ -475,23 +533,11 @@
             <div class="wallet-info">
                 <div class="wallet-label" id="walletLabel">Not connected</div>
                 <div class="wallet-address" id="walletAddress" style="display:none;"></div>
+                <div class="wallet-balance" id="walletBalance" style="display:none; font-size: 0.85em; color: #35D07F; margin-top: 4px; font-weight: 600;"></div>
             </div>
             <button class="btn btn-primary" id="connectBtn">
                 Connect Wallet
             </button>
-        </div>
-
-        <!-- Wallet Selector Modal (shown only when multiple wallets detected) -->
-        <div class="wallet-selector-overlay" id="walletSelectorOverlay" style="display: none;">
-            <div class="wallet-selector-modal">
-                <div class="wallet-selector-header">
-                    <h3>Choose Wallet</h3>
-                    <button class="wallet-selector-close" id="walletSelectorClose">&times;</button>
-                </div>
-                <div class="wallet-selector-body" id="walletSelectorBody">
-                    <!-- Wallet buttons will be dynamically added here -->
-                </div>
-            </div>
         </div>
 
         <div class="game-card">
@@ -540,6 +586,19 @@
                 <div class="stat-card">
                     <div class="stat-value" id="statDraws">0</div>
                     <div class="stat-label">Draws</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Selector Modal -->
+        <div class="wallet-modal-overlay" id="walletModalOverlay" style="display: none;">
+            <div class="wallet-modal">
+                <div class="wallet-modal-header">
+                    <h2>Connect Wallet</h2>
+                    <button class="wallet-modal-close" id="walletModalClose">&times;</button>
+                </div>
+                <div class="wallet-modal-body" id="walletModalBody">
+                    <!-- Wallet options will be dynamically added here -->
                 </div>
             </div>
         </div>
@@ -798,6 +857,7 @@
             walletCard: document.getElementById('walletCard'),
             walletLabel: document.getElementById('walletLabel'),
             walletAddress: document.getElementById('walletAddress'),
+            walletBalance: document.getElementById('walletBalance'),
             connectBtn: document.getElementById('connectBtn'),
             status: document.getElementById('status'),
             board: document.getElementById('board'),
@@ -942,6 +1002,11 @@
                 elements.walletAddress.textContent =
                     gameState.address.slice(0, 6) + '...' + gameState.address.slice(-4);
                 elements.walletAddress.style.display = 'block';
+
+                // Display balance
+                elements.walletBalance.textContent = `💰 ${balanceInCelo.toFixed(4)} CELO`;
+                elements.walletBalance.style.display = 'block';
+
                 elements.connectBtn.style.display = 'none';
 
                 // Load stats
@@ -981,9 +1046,9 @@
          * @param {Function} onSelect - Callback when a wallet is selected
          */
         function showWalletSelector(providers, onSelect) {
-            const overlay = document.getElementById('walletSelectorOverlay');
-            const body = document.getElementById('walletSelectorBody');
-            const closeBtn = document.getElementById('walletSelectorClose');
+            const overlay = document.getElementById('walletModalOverlay');
+            const body = document.getElementById('walletModalBody');
+            const closeBtn = document.getElementById('walletModalClose');
 
             // Clear previous content
             body.innerHTML = '';
@@ -998,23 +1063,24 @@
                     button.classList.add('wallet-option-recommended');
                 }
 
-                // Wallet icon
-                const icon = document.createElement('span');
-                icon.className = 'wallet-option-icon';
-                icon.textContent = getWalletIcon(walletInfo.name);
+                // Wallet icon with SVG
+                const iconContainer = document.createElement('div');
+                iconContainer.className = 'wallet-option-icon';
+                iconContainer.innerHTML = getWalletIconSVG(walletInfo.name);
 
                 // Wallet name
-                const name = document.createElement('span');
-                name.textContent = walletInfo.name;
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'wallet-option-name';
+                nameSpan.textContent = walletInfo.name;
 
-                button.appendChild(icon);
-                button.appendChild(name);
+                button.appendChild(iconContainer);
+                button.appendChild(nameSpan);
 
                 // Recommended badge for first option
                 if (index === 0) {
                     const badge = document.createElement('span');
                     badge.className = 'wallet-option-badge';
-                    badge.textContent = 'RECOMMENDED';
+                    badge.textContent = 'Popular';
                     button.appendChild(badge);
                 }
 
@@ -1045,12 +1111,71 @@
          * Hides the wallet selector modal
          */
         function hideWalletSelector() {
-            const overlay = document.getElementById('walletSelectorOverlay');
+            const overlay = document.getElementById('walletModalOverlay');
             overlay.style.display = 'none';
         }
 
         /**
-         * Gets an appropriate icon for a wallet
+         * Gets SVG icon for a wallet
+         * @param {string} walletName - The wallet name
+         * @returns {string} SVG HTML string
+         */
+        function getWalletIconSVG(walletName) {
+            // MetaMask
+            if (walletName === 'MetaMask') {
+                return `<div class="wallet-icon-metamask" style="width: 100%; height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px;">🦊</div>`;
+            }
+
+            // Coinbase Wallet
+            if (walletName === 'Coinbase Wallet') {
+                return `<div class="wallet-icon-coinbase" style="width: 100%; height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 40 40" style="width: 24px; height: 24px;" fill="white">
+                        <path d="M20 0C8.954 0 0 8.954 0 20s8.954 20 20 20 20-8.954 20-20S31.046 0 20 0zm0 6c7.732 0 14 6.268 14 14s-6.268 14-14 14S6 27.732 6 20 12.268 6 20 6zm-4 10v8h8v-8h-8z"/>
+                    </svg>
+                </div>`;
+            }
+
+            // Farcaster Wallet
+            if (walletName === 'Farcaster Wallet') {
+                return `<div class="wallet-icon-farcaster" style="width: 100%; height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 22px; color: white; font-weight: bold;">
+                    F
+                </div>`;
+            }
+
+            // Rabby Wallet
+            if (walletName === 'Rabby Wallet') {
+                return `<div style="width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%); display: flex; align-items: center; justify-content: center; font-size: 24px;">🐰</div>`;
+            }
+
+            // Trust Wallet
+            if (walletName === 'Trust Wallet') {
+                return `<div style="width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(135deg, #3375BB 0%, #2A5C94 100%); display: flex; align-items: center; justify-content: center;">
+                    <svg viewBox="0 0 40 40" style="width: 24px; height: 24px;" fill="white">
+                        <path d="M20 2L4 8v12c0 9.941 6.882 19.28 16 21.6 9.118-2.32 16-11.659 16-21.6V8L20 2zm0 4.143L32 10.5v9.5c0 8.1-5.547 15.653-12 17.683-6.453-2.03-12-9.583-12-17.683v-9.5l12-4.357z"/>
+                    </svg>
+                </div>`;
+            }
+
+            // Brave Wallet
+            if (walletName === 'Brave Wallet') {
+                return `<div style="width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(135deg, #FB542B 0%, #D63916 100%); display: flex; align-items: center; justify-content: center; font-size: 24px;">🦁</div>`;
+            }
+
+            // TokenPocket
+            if (walletName === 'TokenPocket') {
+                return `<div style="width: 100%; height: 100%; border-radius: 12px; background: linear-gradient(135deg, #2980FE 0%, #1A5FD6 100%); display: flex; align-items: center; justify-content: center; font-size: 24px;">💼</div>`;
+            }
+
+            // Generic Web3 Wallet
+            return `<div class="wallet-icon-generic" style="width: 100%; height: 100%; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
+                <svg viewBox="0 0 40 40" style="width: 24px; height: 24px;" fill="white">
+                    <path d="M20 2C10.059 2 2 10.059 2 20s8.059 18 18 18 18-8.059 18-18S29.941 2 20 2zm0 4c7.732 0 14 6.268 14 14s-6.268 14-14 14S6 27.732 6 20 12.268 6 20 6zm-1 4v10h-6l8 10 8-10h-6V10h-4z"/>
+                </svg>
+            </div>`;
+        }
+
+        /**
+         * Gets an appropriate emoji icon for a wallet (fallback/legacy)
          * @param {string} walletName - The wallet name
          * @returns {string} Emoji icon
          */
