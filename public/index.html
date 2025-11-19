@@ -330,6 +330,128 @@
             justify-content: center;
             gap: 8px;
         }
+
+        /* Wallet Selector Modal */
+        .wallet-selector-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(4px);
+        }
+
+        .wallet-selector-modal {
+            background: white;
+            border-radius: 20px;
+            width: 90%;
+            max-width: 400px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .wallet-selector-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid #E5E5E5;
+        }
+
+        .wallet-selector-header h3 {
+            margin: 0;
+            font-size: 1.2em;
+            font-weight: 700;
+            color: #1A1A1A;
+        }
+
+        .wallet-selector-close {
+            background: none;
+            border: none;
+            font-size: 1.8em;
+            color: #666;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .wallet-selector-close:hover {
+            background: #F0F0F0;
+        }
+
+        .wallet-selector-body {
+            padding: 20px;
+        }
+
+        .wallet-option {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 12px;
+            background: #F8F8F8;
+            border: 2px solid transparent;
+            border-radius: 12px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1em;
+            font-weight: 600;
+            color: #1A1A1A;
+            transition: all 0.2s;
+        }
+
+        .wallet-option:hover {
+            background: #35D07F;
+            color: white;
+            border-color: #35D07F;
+            transform: translateY(-2px);
+        }
+
+        .wallet-option:active {
+            transform: translateY(0);
+        }
+
+        .wallet-option-icon {
+            font-size: 1.5em;
+        }
+
+        .wallet-option-recommended {
+            background: #E8F5E9;
+            border-color: #35D07F;
+        }
+
+        .wallet-option-badge {
+            margin-left: auto;
+            background: #35D07F;
+            color: white;
+            font-size: 0.7em;
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-weight: 700;
+        }
     </style>
 </head>
 <body>
@@ -357,6 +479,19 @@
             <button class="btn btn-primary" id="connectBtn">
                 Connect Wallet
             </button>
+        </div>
+
+        <!-- Wallet Selector Modal (shown only when multiple wallets detected) -->
+        <div class="wallet-selector-overlay" id="walletSelectorOverlay" style="display: none;">
+            <div class="wallet-selector-modal">
+                <div class="wallet-selector-header">
+                    <h3>Choose Wallet</h3>
+                    <button class="wallet-selector-close" id="walletSelectorClose">&times;</button>
+                </div>
+                <div class="wallet-selector-body" id="walletSelectorBody">
+                    <!-- Wallet buttons will be dynamically added here -->
+                </div>
+            </div>
         </div>
 
         <div class="game-card">
@@ -487,6 +622,174 @@
         };
 
         // ============================================
+        // WALLET DETECTION UTILITIES
+        // ============================================
+
+        /**
+         * Detects all available wallet providers
+         * @returns {Object} Detection result with providers and context
+         */
+        function detectWallets() {
+            const result = {
+                inFarcaster: false,
+                farcasterWallet: null,
+                providers: [],
+                recommendedProvider: null
+            };
+
+            // Check if we're in Farcaster context
+            if (window.farcasterSDK && window.farcasterReady) {
+                result.inFarcaster = true;
+                console.log('📱 Running in Farcaster context');
+            }
+
+            // Check for window.ethereum (EIP-1193 provider)
+            if (window.ethereum) {
+                // In Farcaster, window.ethereum IS the Farcaster wallet
+                if (result.inFarcaster) {
+                    result.farcasterWallet = window.ethereum;
+                    result.providers.push({
+                        provider: window.ethereum,
+                        name: 'Farcaster Wallet',
+                        type: 'farcaster',
+                        priority: 100
+                    });
+                    console.log('✅ Detected Farcaster Wallet');
+                } else {
+                    // Outside Farcaster, identify the wallet provider
+                    const providerName = getProviderName(window.ethereum);
+                    const priority = getProviderPriority(providerName);
+
+                    result.providers.push({
+                        provider: window.ethereum,
+                        name: providerName,
+                        type: 'external',
+                        priority: priority
+                    });
+                    console.log(`✅ Detected ${providerName}`);
+                }
+            }
+
+            // Check for EIP-6963 providers (multiple wallet support)
+            if (!result.inFarcaster && window.ethereum && window.ethereum.providers) {
+                console.log('🔍 Multiple providers detected via EIP-6963');
+
+                window.ethereum.providers.forEach((provider, index) => {
+                    const providerName = getProviderName(provider);
+                    const priority = getProviderPriority(providerName);
+
+                    // Avoid duplicates
+                    const exists = result.providers.some(p => p.name === providerName);
+                    if (!exists) {
+                        result.providers.push({
+                            provider: provider,
+                            name: providerName,
+                            type: 'external',
+                            priority: priority
+                        });
+                        console.log(`✅ Detected ${providerName} (${index + 1})`);
+                    }
+                });
+            }
+
+            // Select the best provider
+            if (result.providers.length > 0) {
+                // Sort by priority (highest first)
+                result.providers.sort((a, b) => b.priority - a.priority);
+                result.recommendedProvider = result.providers[0];
+                console.log(`🎯 Recommended provider: ${result.recommendedProvider.name}`);
+            }
+
+            return result;
+        }
+
+        /**
+         * Gets a human-readable name for a provider
+         * @param {Object} provider - The wallet provider object
+         * @returns {string} Provider name
+         */
+        function getProviderName(provider) {
+            if (!provider) return 'Unknown Wallet';
+
+            // Check common provider identifiers
+            if (provider.isMetaMask) return 'MetaMask';
+            if (provider.isCoinbaseWallet) return 'Coinbase Wallet';
+            if (provider.isRabby) return 'Rabby Wallet';
+            if (provider.isTrust) return 'Trust Wallet';
+            if (provider.isBraveWallet) return 'Brave Wallet';
+            if (provider.isTokenPocket) return 'TokenPocket';
+
+            // Check for provider info (EIP-6963)
+            if (provider.providerInfo && provider.providerInfo.name) {
+                return provider.providerInfo.name;
+            }
+
+            // Fallback
+            return 'Web3 Wallet';
+        }
+
+        /**
+         * Gets priority for a wallet provider (higher = better)
+         * @param {string} providerName - The provider name
+         * @returns {number} Priority score
+         */
+        function getProviderPriority(providerName) {
+            const priorities = {
+                'Farcaster Wallet': 100,
+                'MetaMask': 80,
+                'Coinbase Wallet': 75,
+                'Rabby Wallet': 70,
+                'Trust Wallet': 65,
+                'Brave Wallet': 60,
+                'Web3 Wallet': 50
+            };
+
+            return priorities[providerName] || 50;
+        }
+
+        /**
+         * Selects the best available wallet provider
+         * @param {boolean} allowManualSelection - If true, show selector when multiple wallets detected
+         * @returns {Object|null|Promise} Selected provider info, null, or Promise if showing selector
+         */
+        function selectBestProvider(allowManualSelection = false) {
+            // Check if there's a manually selected wallet (from modal)
+            if (window.selectedWallet) {
+                console.log(`🎯 Using manually selected ${window.selectedWallet.name}`);
+                return window.selectedWallet;
+            }
+
+            const detection = detectWallets();
+
+            if (detection.providers.length === 0) {
+                console.warn('⚠️ No wallet providers detected');
+                return null;
+            }
+
+            // If in Farcaster, always use Farcaster wallet (no manual selection)
+            if (detection.inFarcaster && detection.farcasterWallet) {
+                console.log('🎯 Auto-selected Farcaster Wallet');
+                return detection.providers[0]; // Already sorted by priority
+            }
+
+            // Outside Farcaster with multiple wallets and manual selection allowed
+            if (allowManualSelection && detection.providers.length > 1) {
+                console.log(`🎯 Multiple wallets detected (${detection.providers.length}), showing selector...`);
+
+                // Return a Promise that resolves when user selects a wallet
+                return new Promise((resolve) => {
+                    showWalletSelector(detection.providers, (selectedWallet) => {
+                        resolve(selectedWallet);
+                    });
+                });
+            }
+
+            // Auto-select highest priority wallet
+            console.log(`🎯 Auto-selected ${detection.recommendedProvider.name}`);
+            return detection.recommendedProvider;
+        }
+
+        // ============================================
         // DOM ELEMENTS
         // ============================================
         const elements = {
@@ -546,16 +849,28 @@
             gameState.processing = true;
 
             try {
-                setStatus('Connecting to Farcaster wallet... 🔗');
+                // Auto-detect best wallet provider (allow manual selection if multiple wallets)
+                let selectedWallet = selectBestProvider(true);
+
+                // If selectBestProvider returns a Promise (manual selection), await it
+                if (selectedWallet instanceof Promise) {
+                    setStatus('Choose your wallet... 💼');
+                    selectedWallet = await selectedWallet;
+                }
+
+                if (!selectedWallet) {
+                    throw new Error('No wallet found. Please install MetaMask or open in Farcaster app.');
+                }
+
+                const walletName = selectedWallet.name;
+                const walletProvider = selectedWallet.provider;
+
+                setStatus(`Connecting to ${walletName}... 🔗`);
                 elements.connectBtn.disabled = true;
                 elements.connectBtn.textContent = 'Connecting...';
 
-                if (!window.ethereum) {
-                    throw new Error('No wallet found. Please open in Farcaster app.');
-                }
-
-                console.log('🔌 Requesting accounts...');
-                const accounts = await window.ethereum.request({
+                console.log(`🔌 Requesting accounts from ${walletName}...`);
+                const accounts = await walletProvider.request({
                     method: 'eth_requestAccounts'
                 });
 
@@ -564,9 +879,12 @@
                 }
 
                 gameState.address = accounts[0];
-                console.log('✅ Connected:', gameState.address);
+                console.log(`✅ Connected to ${walletName}:`, gameState.address);
 
-                gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
+                // Store wallet info for UI display
+                gameState.walletName = walletName;
+
+                gameState.provider = new ethers.providers.Web3Provider(walletProvider);
 
                 // Check/Switch network
                 const network = await gameState.provider.getNetwork();
@@ -577,13 +895,13 @@
                     setStatus('Switching to Celo... 🔄');
 
                     try {
-                        await window.ethereum.request({
+                        await walletProvider.request({
                             method: 'wallet_switchEthereumChain',
                             params: [{ chainId: CELO_MAINNET.chainIdHex }]
                         });
                     } catch (switchError) {
                         if (switchError.code === 4902 || switchError.code === -32603) {
-                            await window.ethereum.request({
+                            await walletProvider.request({
                                 method: 'wallet_addEthereumChain',
                                 params: [CELO_MAINNET]
                             });
@@ -592,7 +910,7 @@
                         }
                     }
 
-                    gameState.provider = new ethers.providers.Web3Provider(window.ethereum);
+                    gameState.provider = new ethers.providers.Web3Provider(walletProvider);
                 }
 
                 // Balance
@@ -616,7 +934,11 @@
 
                 // Update UI
                 gameState.connected = true;
-                elements.walletLabel.textContent = '🟣 Farcaster Wallet Connected';
+
+                // Dynamic wallet icon based on provider
+                const walletIcon = walletName === 'Farcaster Wallet' ? '🟣' : '🦊';
+                elements.walletLabel.textContent = `${walletIcon} ${walletName} Connected`;
+
                 elements.walletAddress.textContent =
                     gameState.address.slice(0, 6) + '...' + gameState.address.slice(-4);
                 elements.walletAddress.style.display = 'block';
@@ -647,6 +969,119 @@
             } finally {
                 gameState.processing = false;
             }
+        }
+
+        // ============================================
+        // WALLET SELECTOR UI (Optional - shown only when multiple wallets detected)
+        // ============================================
+
+        /**
+         * Shows the wallet selector modal with detected wallets
+         * @param {Array} providers - Array of wallet provider objects
+         * @param {Function} onSelect - Callback when a wallet is selected
+         */
+        function showWalletSelector(providers, onSelect) {
+            const overlay = document.getElementById('walletSelectorOverlay');
+            const body = document.getElementById('walletSelectorBody');
+            const closeBtn = document.getElementById('walletSelectorClose');
+
+            // Clear previous content
+            body.innerHTML = '';
+
+            // Add wallet options
+            providers.forEach((walletInfo, index) => {
+                const button = document.createElement('button');
+                button.className = 'wallet-option';
+
+                // Add recommended class for highest priority wallet
+                if (index === 0) {
+                    button.classList.add('wallet-option-recommended');
+                }
+
+                // Wallet icon
+                const icon = document.createElement('span');
+                icon.className = 'wallet-option-icon';
+                icon.textContent = getWalletIcon(walletInfo.name);
+
+                // Wallet name
+                const name = document.createElement('span');
+                name.textContent = walletInfo.name;
+
+                button.appendChild(icon);
+                button.appendChild(name);
+
+                // Recommended badge for first option
+                if (index === 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'wallet-option-badge';
+                    badge.textContent = 'RECOMMENDED';
+                    button.appendChild(badge);
+                }
+
+                // Click handler
+                button.onclick = () => {
+                    hideWalletSelector();
+                    onSelect(walletInfo);
+                };
+
+                body.appendChild(button);
+            });
+
+            // Show modal
+            overlay.style.display = 'flex';
+
+            // Close button handler
+            closeBtn.onclick = hideWalletSelector;
+
+            // Close on overlay click
+            overlay.onclick = (e) => {
+                if (e.target === overlay) {
+                    hideWalletSelector();
+                }
+            };
+        }
+
+        /**
+         * Hides the wallet selector modal
+         */
+        function hideWalletSelector() {
+            const overlay = document.getElementById('walletSelectorOverlay');
+            overlay.style.display = 'none';
+        }
+
+        /**
+         * Gets an appropriate icon for a wallet
+         * @param {string} walletName - The wallet name
+         * @returns {string} Emoji icon
+         */
+        function getWalletIcon(walletName) {
+            const icons = {
+                'Farcaster Wallet': '🟣',
+                'MetaMask': '🦊',
+                'Coinbase Wallet': '🔵',
+                'Rabby Wallet': '🐰',
+                'Trust Wallet': '🛡️',
+                'Brave Wallet': '🦁',
+                'TokenPocket': '💰',
+                'Web3 Wallet': '🌐'
+            };
+
+            return icons[walletName] || '💼';
+        }
+
+        /**
+         * Connects to a specific wallet (used by manual selection)
+         * @param {Object} walletInfo - The selected wallet info object
+         */
+        async function connectToSpecificWallet(walletInfo) {
+            // Store the selected wallet temporarily
+            window.selectedWallet = walletInfo;
+
+            // Call the main connect function (it will use the selected wallet)
+            await connectWallet();
+
+            // Clear the temporary selection
+            delete window.selectedWallet;
         }
 
         // ============================================
